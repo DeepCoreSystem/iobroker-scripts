@@ -396,4 +396,142 @@ doControlling();
 
 Waermeanforderung();
 
+/**
+integer max_vent_sin_i_c = 15;		! Maximaloeffnung fuer 1 Ventil ab dem die Therme einschaltet
+integer max_vent_sum_i_c = 20;		! Maximaloeffnung Summe Ventile ab dem die Therme einschaltet
+integer min_vent_sin_i_c = 5;                 ! Minimaloeffnung fuer 1 Ventil ab dem die Therme abschaltet
+integer min_vent_sum_i_c = 10;		! Minimaloeffnung Summe Ventile unter welchem die Therme abschaltet
+integer switch_delay_i_c = 1800;		! Zeit in Sekunden fuer Einschaltsperre der Therme
 
+boolean vent_sin_open_b = false;
+boolean vent_sin_close_b = true;
+
+var vs_summe = 0;
+integer vs_waerme = 0;
+
+
+! Gaestezimmer
+integer item = 1535;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Jagdst. Front
+item = 21170;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Jagdst. HT
+item = 1834;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Buero links
+item = 1502;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Buero rechts
+item = 24960;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Kueche 
+item = 1657;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Schlafzimmer OG
+item = 1775;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Medienzimmer
+item = 1716;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+! Wohnzimmer
+item = 1572;
+vs_summe = vs_summe + dom.GetObject ( item ).State();
+
+if (dom.GetObject( item ).State() >= max_vent_sin_i_c) {
+    vent_sin_open_b = true;
+}
+
+if (dom.GetObject( item ).State() >= min_vent_sin_i_c) {
+    vent_sin_close_b = false;
+}
+
+dom.GetObject( 37349 ).State(vs_summe);
+
+integer diff_i;
+diff_i = system.Date("%Y-%m-%d %H:%M:%S").ToTime().ToInteger() - dom.GetObject( 39300 ).Timestamp().ToInteger();
+
+
+! Therme ausschalten bei Summe aller Ventiloeffnungen <= z.B. 20% oder max. 1 Ventiloeffnung <= z.B. 30%
+if (((vs_summe <= min_vent_sum_i_c) || vent_sin_close_b) && (dom.GetObject(39300).Value())) {
+  dom.GetObject(39300).State(false);
+}
+
+! Therme einschalten bei Summe aller Ventiloeffnungen >= z.B.30% oder mind. 1 Ventiloeffnung >= z.B. 40%
+if (((vs_summe >= max_vent_sum_i_c) || vent_sin_open_b) && (diff_i > switch_delay_i_c) && !(dom.GetObject(39300).Value())) {
+  dom.GetObject(39300).State(true);
+}
+
+**/
