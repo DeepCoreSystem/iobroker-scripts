@@ -175,11 +175,6 @@ var ProfilSchlafzimmer = {
 var HZVentile=[];
 var HZController=[];
 
-var VorlaufPumpeId = "";
-
-var VorlaufTempHzId = "";
-var VorlaufTempWwId = "";
-
 HZVentile[0]  = new createHeizVentil ("Ventil Wohnzimmer OG","hm-rpc.0.FEQ0050486"/*Heizkörper OG Wohnzimmer (links)*/);
 HZVentile[1]  = new createHeizVentil ("Ventil Schlafzimmer","hm-rpc.0.FEQ0050837"/*Heizkörper OG Schlafzimmer*/);
 HZVentile[2]  = new createHeizVentil ("Ventil Büro (links)","hm-rpc.0.FEQ0050559"/*Heizkörper EG Wohnzimmer (links)*/);
