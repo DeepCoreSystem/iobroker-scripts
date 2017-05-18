@@ -43,8 +43,44 @@ bereiche[6] = new createBereich ("Speicher");
 bereiche[7] = new createBereich ("Büro");
 bereiche[8] = new createBereich ("Bad EG");
 bereiche[9] = new createBereich ("Keller");
+bereiche[10] = new createBereich ("Aussenbereich Scheinwerfer");
 
-lightspec[0]  = new createLightControl ("Testlicht",[0],"javascript.0.testlight",false);
+lightspec[0]  = new createLightControl ("Aussenlicht Eingang",[0],"hm-rpc.0.GEQ0132467.1.STATE"/*Aussen-Laterne:1.STATE*/,false);
+lightspec[1]  = new createLightControl ("Aussenlicht Garage",[0],"hm-rpc.0.HEQ0366230.3.STATE"/*Licht Aussenbereich Einfahrt:3.STATE*/,false);
+lightspec[2]  = new createLightControl ("Garagenlicht",[0],"hm-rpc.0.HEQ0366230.4.STATE"/*Licht Garage 2:4.STATE*/,false);
+lightspec[3]  = new createLightControl ("Aussenstrahler (Nord)",[0,10],"hm-rpc.0.LEQ0016179.3.STATE"/*Licht Aussenbereich Nord:3.STATE*/,false);
+lightspec[4]  = new createLightControl ("Aussenstrahler (Ost)",[0,10],"hm-rpc.0.IEQ0383166.1.STATE"/*Licht Aussenbereich Ost:1.STATE*/,false);
+lightspec[5]  = new createLightControl ("Aussenstrahler (Süd)",[0,10],"hm-rpc.0.IEQ0383166.4.STATE"/*Licht Aussenbereich Süd:4.STATE*/,false);
+lightspec[6]  = new createLightControl ("Aussenstrahler (West)",[0,10],"hm-rpc.0.LEQ0016179.4.STATE"/*Licht Aussenbereich West:4.STATE*/,false);
+
+lightspec[7]  = new createLightControl ("Hausganglicht",[1],"hm-rpc.0.GEQ0132435.1.STATE"/*Licht EG Hausgang:1.STATE*/,false);
+lightspec[8]  = new createLightControl ("Licht Diele OG",[1],"hm-rpc.0.GEQ0132540.1.STATE"/*Licht OG Diele.STATE*/,false);
+lightspec[9]  = new createLightControl ("Licht Kellertreppe",[1],"hm-rpc.0.FEQ0037826.1.STATE"/*Licht Kellertreppe:1.STATE*/,false);
+
+lightspec[10] = new createLightControl ("Sitzgruppe Wohnzimmer",[2],"hm-rpc.0.IEQ0039792.1.LEVEL"/*Licht Wohnzimmer OG:1.LEVEL*/,true);
+lightspec[11] = new createLightControl ("Wohnzimmer Essbereich",[2],"hm-rpc.0.IEQ0104330.1.STATE"/*Licht Wohnzimmer OG Essbereich:1.STATE*/,false);
+lightspec[12] = new createLightControl ("Wohnzimmer Vitrine",[2],"hm-rpc.0.IEQ0104330.2.STATE"/*Licht Wohnzimmer OG Essbereich:2.STATE*/,false);
+lightspec[13] = new createLightControl ("Balkonlicht",[0,2],"hm-rpc.0.GEQ0132247.1.STATE"/*Licht Balkon:1.STATE*/,false);
+lightspec[14] = new createLightControl ("Küchenlicht",[2],"hm-rpc.0.IEQ0541192.1.STATE"/*Licht OG Küche:1.STATE*/,false);
+lightspec[15] = new createLightControl ("Küche Untersicht Kochfeld",[2],"hm-rpc.0.IEQ0025932.2.STATE"/*Küche OG - Untersichten (rechts):2.STATE*/,false);
+lightspec[16] = new createLightControl ("Küche Untersicht Spüle",[2],"hm-rpc.0.IEQ0025932.1.STATE"/*Küche OG - Untersichten (links):1.STATE*/,false);
+
+lightspec[17] = new createLightControl ("Medienraum",[5],"hm-rpc.0.IEQ0039909.1.LEVEL"/*Dimmer OG Stüberl:1.LEVEL*/,true);
+
+lightspec[18] = new createLightControl ("Schlafzimmer Schrankwand",[3],"hm-rpc.0.IEQ0090665.1.STATE"/*Licht Schlafz OG Schiene:1.STATE*/,false);
+lightspec[19] = new createLightControl ("Schlafzimmer Bett rechts",[3],"hm-rpc.0.GEQ0210167.1.LEVEL"/*Licht Schlafzimmer OG (Bett rechts):1.LEVEL*/,true);
+lightspec[20] = new createLightControl ("Schlafzimmer Bett links",[3],"hm-rpc.0.GEQ0210167.2.LEVEL"/*Licht Schlafzimmer OG (Bett links):2.LEVEL*/,true);
+
+lightspec[21] = new createLightControl ("Badezimmer OG", [4], "hm-rpc.0.LEQ1318091.1.LEVEL"/*Licht Bad OG:1.LEVEL*/,true);
+
+lightspec[22] = new createLightControl ("Bürolicht",[7],"hm-rpc.0.HEQ0358991.1.LEVEL"/*Dimmer EG Wohnzimmer:1.LEVEL*/,true);
+lightspec[23] = new createLightControl ("Büro Leselampe",[7],"hm-rpc.0.GEQ0132331.1.STATE"/*Licht EG Wohnzimmer Leselampe:1.STATE*/,false);
+
+lightspec[24] = new createLightControl ("Licht Speicheraufgang",[6],"hm-rpc.0.LEQ0016179.1.STATE"/*Licht Speicheraufgang:1.STATE*/,false);
+lightspec[25] = new createLightControl ("Licht Speichermitte",[6],"hm-rpc.0.LEQ0016179.2.STATE"/*Licht Speichermitte:2.STATE*/,false);
+lightspec[26] = new createLightControl ("Licht Balkonüberbau",[6],"hm-rpc.0.IEQ0383166.2.STATE"/*Licht Balkonüberbau:2.STATE*/,false);
+
+lightspec[27] = new createLightControl ("Badezimmer Erdgeschoss",[8],"hm-rpc.0.MEQ0709338.1.STATE"/*Licht Bad EG:1.STATE*/,false);
 
 function createBereich ( Name ) {
     this.Name = Name;
