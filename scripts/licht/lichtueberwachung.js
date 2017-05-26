@@ -24,12 +24,17 @@ function dwmlog( message, level, channel) {
     }
 }
 
+var AdapterId = "javascript.0";
 var LightsOnListHTML = "";
 var LightsOnListHTMLId = "Beleuchtung.ListeAnHTML";
 var LightsOnCountId = "Beleuchtung.AnzahlAn";
-var LightsControlPhaseId = "javascript.0.Beleuchtung.ControlPhase";
+var LightsControlPhaseId = AdapterId+".Beleuchtung.ControlPhase";
+
+var TagesAbschnittId = AdapterId+".Sonnenstand.Tagesabschnitt"; /*Sonnenstand.Tagesabschnitt*/
+var HelligkeitId = AdapterId+".Helligkeit.Helligkeitsstufe";
 
 var lightspec = [];
+var trigger = [];
 var bereiche = [];
 
 // Bereichsspezifikationen
@@ -46,6 +51,8 @@ bereiche[9] = new createBereich ("Keller");
 bereiche[10] = new createBereich ("Aussenbereich Scheinwerfer");
 
 lightspec[0]  = new createLightControl ("Aussenlicht Eingang",[0],"hm-rpc.0.GEQ0132467.1.STATE"/*Aussen-Laterne:1.STATE*/,false);
+enableAutoControl(0);
+
 lightspec[1]  = new createLightControl ("Aussenlicht Garage",[0],"hm-rpc.0.HEQ0366230.3.STATE"/*Licht Aussenbereich Einfahrt:3.STATE*/,false);
 lightspec[2]  = new createLightControl ("Garagenlicht",[0],"hm-rpc.0.HEQ0366230.4.STATE"/*Licht Garage 2:4.STATE*/,false);
 lightspec[3]  = new createLightControl ("Aussenstrahler (Nord)",[0,10],"hm-rpc.0.LEQ0016179.3.STATE"/*Licht Aussenbereich Nord:3.STATE*/,false);
@@ -54,13 +61,19 @@ lightspec[5]  = new createLightControl ("Aussenstrahler (Süd)",[0,10],"hm-rpc.0
 lightspec[6]  = new createLightControl ("Aussenstrahler (West)",[0,10],"hm-rpc.0.LEQ0016179.4.STATE"/*Licht Aussenbereich West:4.STATE*/,false);
 
 lightspec[7]  = new createLightControl ("Hausganglicht",[1],"hm-rpc.0.GEQ0132435.1.STATE"/*Licht EG Hausgang:1.STATE*/,false);
+enableAutoControl(7);
+
 lightspec[8]  = new createLightControl ("Licht Diele OG",[1],"hm-rpc.0.GEQ0132540.1.STATE"/*Licht OG Diele.STATE*/,false);
+enableAutoControl(8);
+
 lightspec[9]  = new createLightControl ("Licht Kellertreppe",[1],"hm-rpc.0.FEQ0037826.1.STATE"/*Licht Kellertreppe:1.STATE*/,false);
 
 lightspec[10] = new createLightControl ("Sitzgruppe Wohnzimmer",[2],"hm-rpc.0.IEQ0039792.1.LEVEL"/*Licht Wohnzimmer OG:1.LEVEL*/,true);
 lightspec[11] = new createLightControl ("Wohnzimmer Essbereich",[2],"hm-rpc.0.IEQ0104330.1.STATE"/*Licht Wohnzimmer OG Essbereich:1.STATE*/,false);
 lightspec[12] = new createLightControl ("Wohnzimmer Vitrine",[2],"hm-rpc.0.IEQ0104330.2.STATE"/*Licht Wohnzimmer OG Essbereich:2.STATE*/,false);
 lightspec[13] = new createLightControl ("Balkonlicht",[0,2],"hm-rpc.0.GEQ0132247.1.STATE"/*Licht Balkon:1.STATE*/,false);
+enableAutoControl(13,false); // kein Autocoupling, muss an Tagesabschnitte gekoppelt werden, nicht an Aktivitätsphasen
+
 lightspec[14] = new createLightControl ("Küchenlicht",[2],"hm-rpc.0.IEQ0541192.1.STATE"/*Licht OG Küche:1.STATE*/,false);
 lightspec[15] = new createLightControl ("Küche Untersicht Kochfeld",[2],"hm-rpc.0.IEQ0025932.2.STATE"/*Küche OG - Untersichten (rechts):2.STATE*/,false);
 lightspec[16] = new createLightControl ("Küche Untersicht Spüle",[2],"hm-rpc.0.IEQ0025932.1.STATE"/*Küche OG - Untersichten (links):1.STATE*/,false);
@@ -81,6 +94,10 @@ lightspec[25] = new createLightControl ("Licht Speichermitte",[6],"hm-rpc.0.LEQ0
 lightspec[26] = new createLightControl ("Licht Balkonüberbau",[6],"hm-rpc.0.IEQ0383166.2.STATE"/*Licht Balkonüberbau:2.STATE*/,false);
 
 lightspec[27] = new createLightControl ("Badezimmer Erdgeschoss",[8],"hm-rpc.0.MEQ0709338.1.STATE"/*Licht Bad EG:1.STATE*/,false);
+lightspec[27].AutoOffCoupling = false;
+lightspec[27].AutoOffTime = 2700;
+enableAutoControl(27);
+
 
 function createBereich ( Name ) {
     this.Name = Name;
@@ -93,9 +110,36 @@ function createLightControl ( Name, Bereiche, Id, IsDimmer ) {
     this.IsDimmer = IsDimmer;
     
     // this.SlaveList = [];
-    // this.AutoOffModeId = null;
-    // this.AutoOffTime = 300;
-    // this.AutoOffEnableId = null;
+    this.ControlModeId = null;
+    
+    // this.AutoOffTime = 600;
+    // this.AutoOffTimer = null;
+    this.AutoOffCoupling = true;
+}
+
+/*
+function createTrigger(ControllerIndex, Id, On, Invert, EnablingState) {
+    this.ControllerIndex=ControllerIndex;
+    this.Id = Id;
+    this.On = On;
+    this.Invert=Invert;
+    if (EnablingState !== undefined) {
+        this.EnablingState=EnablingState;
+    } else this.EnablingState=null;
+    
+    // lightspec[ControllerIndex].Trigger.push(this);
+}
+*/
+
+function enableAutoControl (i,doAutoCoupling) {
+    var statename="Beleuchtung.Controllers."+lightspec[i].Name.replace(/ /g, "_")+".ControlMode";
+    lightspec[i].ControlModeId = statename;
+    dwmlog ("Auto Control enabled: "+JSON.stringify(lightspec[i]),4);
+    if (doAutoCoupling === undefined) {
+        
+    } else {
+        lightspec[i].AutoOffCoupling = doAutoCoupling;
+    }
 }
 
 function createStates() {
@@ -138,17 +182,92 @@ function createStates() {
                );
                
     createState( LightsControlPhaseId ,                 // name
-                     0,                                                     // initial value
-                     0,
+                     5,                                                     // initial value
+                     false,
                      { 
                          type: 'number', 
                          min: 0,
-                         max: 3,
-                         states: ['OnPhase','OnPhase2','OnPhase3','AutoOff','PartyMode']
+                         max: 5,
+                         states: ['PartyMode','OnPhase1','OnPhase2','OnPhase3','AutoOnOff','AutoOff']
         		     }                     
                    );
          
+
+    for (i=0; i<lightspec.length; i++) {
+        dwmlog ("Prüfe Control-State: "+lightspec[i].Name,4);
+        var statename=lightspec[i].ControlModeId;
+        if (statename !== null) {
+            dwmlog ("Genierere Kontroll-State für Light Controller "+statename,4);
+            createState( statename ,                 // name
+                             2,                                                     // initial value
+                             false,
+                             { 
+                                 type: 'number', 
+                                 min: 0,
+                                 max: 3,
+                                 states: ['AutoDisabled','AutoOn','AutoOff','AutoOnOff']
+                		     }                     
+                           );
+            
+        } else {
+            statename="Beleuchtung.Controllers."+lightspec[i].Name.replace(/ /g, "_")+".ControlMode";
+            deleteState (statename);
+        }
+    }
 }
+
+/**
+ * "Kontrollphase ... korreliert Helligkeiten"
+ * - Nacht: Passivphase, Automatisches An- und wieder aus
+ * - Frühmorgens: dito :)
+ * 
+ */
+function calcLightsControlPhase() {
+    var tagesabschnitt = getState(TagesAbschnittId).val;
+    var Helligkeit = getState(HelligkeitId).val;
+    
+    var AktivPhase = 0; // 0=Inaktiv, 1=Aktiv
+    
+    var AktivStart = "07:00"; // TODO: Von Variable holen und Wecker mit einbeziehen
+    var AktivEnde  = "22:00";
+    
+    _now = getTimeAsStr(new Date());
+    var controlphase = 5; // Default Auto-Off
+    
+    
+    if (_now < AktivStart) {
+        dwmlog ("Vor Aktivphase",4);
+        AktivPhase=0;
+        if (Helligkeit > 2) controlphase = 5; else controlphase=4;
+    }
+    else if (_now < AktivEnde ) {
+        dwmlog ("In Aktivphase",4);
+        AktivPhase=1;
+        switch(Helligkeit) {
+            case 0: 
+                controlphase=1;
+                break;
+            case 1:
+                controlphase=2;
+                break;
+            case 2:
+                controlphase=3;
+                break;
+            default:
+                controlphase=5;
+        }        
+    } else {
+        dwmlog ("Nach Aktivphase",4);
+        AktivPhase=0;
+        if (Helligkeit > 2) controlphase = 5; else controlphase=4;
+    }
+    
+    if ( getState(LightsControlPhaseId) !== 0 ) { // PartyMode 
+        setState (LightsControlPhaseId,controlphase);
+        dwmlog ("Licht-Kontroll-Modus für Tagesabschnitt "+tagesabschnitt+" ist "+controlphase,2);
+    }
+}
+
 
 function LightsWatchAll() {
     var bereichresult=[];
@@ -201,13 +320,106 @@ function addToOnlist( i ) {
     LightsOnListHTML += lightspec[i].Name;
 }
 
-function LightEvent (data) {
-    dwmlog ("LightEvent triggered: "+JSON.stringify(data),4);
-    LightsWatchAll();
+function findLightspec(Id) {
+    for (i=0; i<lightspec.length;i++) {
+        if (lightspec[i].Id==Id) return i;
+    }
 }
 
 
+function LightEvent (data) {
+    dwmlog ("LightEvent triggered: "+JSON.stringify(data),4);
+    /*
+    var i = findLightspec(data.id);
+    var ControlMode = 0;
+    if (lightspec[i].ControlModeId!==null) ControlMode = getState(lightspec[i].ControlModeId).val;
+    
+    if (data.state.val > 0) {
+        dwmlog ("Licht AN "+i,4);
+        if (ControlMode==2 || ControlMode==3) { // Auto-Off oder Auto-OnOff
+            if (lightspec[i].isDimmer) {
+                lightspec[i].AutoOffTimer=setStateDelayed(lightspec[i].Id,0,lightspec[i].AutoOffTime*1000,true,function(data){dwmlog("Ausschalten nach Timeout (Dimmer)",4);});
+            } else {
+                lightspec[i].AutoOffTimer=setStateDelayed(lightspec[i].Id,false,lightspec[i].AutoOffTime*1000,true,function(data){dwmlog("Ausschalten nach Timeout",4);});
+            }
+        }
+    } else {
+        dwmlog ("Licht AUS "+i+" "+lightspec[i].AutoOffTimer,2);
+        clearStateDelayed(data.id);
+        lightspec[i].AutoOffTimer=null;
+    }
+    */
+    
+    LightsWatchAll();
+}
+
+// TODO: Verifizieren, dass die Automatische Kopplung nicht das "AutoDiabled"
+//       der einzelnen Controller überschreibt.
+//       Erinnerung: Das ist nicht der Partymode. Die Einzelcontroller im Partymode
+//       werden auf "AutoOn" geschaltet!
+function coupleControlModes() {
+    var controlmode = getState(LightsControlPhaseId).val;
+    var Helligkeit = getState(HelligkeitId).val;
+
+    dwmlog ("coupleControlMode: "+controlmode,2);
+
+    for (i=0; i<lightspec.length; i++) {
+        if ( lightspec[i].ControlModeId!==null) {
+            if (lightspec[i].AutoOffCoupling) { // nur, wenn Auto-Modus für den Controller nicht abgeschaltet ist.
+                switch (controlmode) {
+                    case 0: // Partymode ... Immer AutoOn, wenns Dunkel ist.
+                        if (Helligkeit < 3) 
+                            setState(lightspec[i].ControlModeId,1);
+                        else 
+                            setState(lightspec[i].ControlModeId,2);
+                        break;
+                    case 1:
+                    case 2:
+                    case 3:
+                        setState(lightspec[i].ControlModeId,1);
+                        break;
+                    case 4:
+                        setState(lightspec[i].ControlModeId,3);
+                        break;
+                    case 5:
+                        setState(lightspec[i].ControlModeId,2);
+                        break;
+                }
+            }
+        }
+    }
+}
+
+/*
+function handleOnEvent(i,data) {
+    dwmlog ("Handling ON Event for Index: "+i,4);
+    if (lightspec[i].ControlModeId !== null ) {
+        var controlmode=getState(lightspec[i].ControlModeId).val;
+        if (controlmode==1 || controlmode==3) {
+            if (lightspec[i].isDimmer) 
+                setState(lightspec[i].Id,75);
+            else
+                setState(lightspec[i].Id,true);
+        }
+    }
+}
+
+function handleOffEvent(i) {
+    dwmlog ("Handling OFF Event for Index: "+i,4);
+}
+
+*/
+
+/********************* Spezialfunktionen :) ***********************************/
+
 function setupEvents() {
+    schedule ("1 7,22 * * *", function() {
+         calcLightsControlPhase();
+    });
+    
+    subscribe ({id: HelligkeitId, change:"ne"}, function(data){ calcLightsControlPhase(); });
+    subscribe ({id: LightsControlPhaseId, change:"ne"}, function(data){ coupleControlModes(); });
+    
     for (i=0; i<lightspec.length; i++) {
         subscribe({id: lightspec[i].Id, change:"ne"}, function(data){
             LightEvent(data);
@@ -215,7 +427,20 @@ function setupEvents() {
     }
 }
 
+/******************************************************************************/
+
+// Licht Hausgang
+// subscribe ({id: "hm-rpc.0.GEQ0128067.1.MOTION"/*Bewegung EG Gang:1.MOTION*/, val:true}, function(data) { handleOnEvent(7,data); });
+// subscribe ({id: "hm-rpc.0.MEQ0670341.3.MOTION"/*Bewegungsmelder Hausgang EG West.MOTION*/, val:true}, function(data) { handleOnEvent(7,data); });
+
+
+// Licht Diele OG
+// subscribe ({id: "hm-rpc.0.GEQ0127607.1.MOTION"/*Bewegung OG Diele:1.MOTION*/, val:true}, function(data) { handleOnEvent(8,data); });
+
+
 createStates();
 setupEvents();
 
+calcLightsControlPhase();
 LightsWatchAll();
+
