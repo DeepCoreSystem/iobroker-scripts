@@ -11,24 +11,12 @@
 var debuglevel = 4;
 var debugchannel = 'info';
 
-function dwmlog( message, level, channel) {
-    if (typeof channel === 'undefined') {
-        channel = debugchannel;
-    }
-    if ( typeof level === 'undefined')
-    {
-        level = debuglevel;
-    }
-    if ( debuglevel >= level ) {
-        log (message, channel );
-    }
-}
-
 var AdapterId = "javascript.0";
 var LightsOnListHTML = "";
 var LightsOnListHTMLId = "Beleuchtung.ListeAnHTML";
 var LightsOnCountId = "Beleuchtung.AnzahlAn";
 var LightsControlPhaseId = AdapterId+".Beleuchtung.ControlPhase";
+var ActivityPhaseId = AdapterId+".Activity.Phase";
 
 var TagesAbschnittId = AdapterId+".Sonnenstand.Tagesabschnitt"; /*Sonnenstand.Tagesabschnitt*/
 var HelligkeitId = AdapterId+".Helligkeit.Helligkeitsstufe";
@@ -54,7 +42,10 @@ lightspec[0]  = new createLightControl ("Aussenlicht Eingang",[0],"hm-rpc.0.GEQ0
 enableAutoControl(0);
 
 lightspec[1]  = new createLightControl ("Aussenlicht Garage",[0],"hm-rpc.0.HEQ0366230.3.STATE"/*Licht Aussenbereich Einfahrt:3.STATE*/,false);
+enableAutoControl(1);
 lightspec[2]  = new createLightControl ("Garagenlicht",[0],"hm-rpc.0.HEQ0366230.4.STATE"/*Licht Garage 2:4.STATE*/,false);
+enableAutoControl(2);
+
 lightspec[3]  = new createLightControl ("Aussenstrahler (Nord)",[0,10],"hm-rpc.0.LEQ0016179.3.STATE"/*Licht Aussenbereich Nord:3.STATE*/,false);
 lightspec[4]  = new createLightControl ("Aussenstrahler (Ost)",[0,10],"hm-rpc.0.IEQ0383166.1.STATE"/*Licht Aussenbereich Ost:1.STATE*/,false);
 lightspec[5]  = new createLightControl ("Aussenstrahler (Süd)",[0,10],"hm-rpc.0.IEQ0383166.4.STATE"/*Licht Aussenbereich Süd:4.STATE*/,false);
@@ -94,9 +85,8 @@ lightspec[25] = new createLightControl ("Licht Speichermitte",[6],"hm-rpc.0.LEQ0
 lightspec[26] = new createLightControl ("Licht Balkonüberbau",[6],"hm-rpc.0.IEQ0383166.2.STATE"/*Licht Balkonüberbau:2.STATE*/,false);
 
 lightspec[27] = new createLightControl ("Badezimmer Erdgeschoss",[8],"hm-rpc.0.MEQ0709338.1.STATE"/*Licht Bad EG:1.STATE*/,false);
-lightspec[27].AutoOffCoupling = false;
 lightspec[27].AutoOffTime = 2700;
-enableAutoControl(27);
+enableAutoControl(27,false);
 
 
 function createBereich ( Name ) {
@@ -115,6 +105,12 @@ function createLightControl ( Name, Bereiche, Id, IsDimmer ) {
     // this.AutoOffTime = 600;
     // this.AutoOffTimer = null;
     this.AutoOffCoupling = true;
+    
+    // Mappt den ControlMode auf den Controllermode.
+    this.ControlModeMap = [1,1,1,1,3,2];
+    
+    // Folgend ist eine Map von Activitätsphase und Helligkeit auf ControllerMode
+    this.ControlModeMap2 = [[3,3,3,2,2],[1,1,1,2,2]];
 }
 
 /*
@@ -163,6 +159,14 @@ function createStates() {
                          states: ['Aus','An']
         		     }                     
                    );
+        createState( "Bereiche."+bereiche[i].Name.replace(/ /g, "_")+".LichtAutomatik",                 // name
+                     0,                                                     // initial value
+                     0,
+                     { 
+                         type: 'number', 
+                         states: ['Aus','An']
+        		     }                     
+                   );
     }
     
     // Liste der offenen Fenster
@@ -192,12 +196,13 @@ function createStates() {
         		     }                     
                    );
          
-
     for (i=0; i<lightspec.length; i++) {
         dwmlog ("Prüfe Control-State: "+lightspec[i].Name,4);
+
         var statename=lightspec[i].ControlModeId;
         if (statename !== null) {
             dwmlog ("Genierere Kontroll-State für Light Controller "+statename,4);
+
             createState( statename ,                 // name
                              2,                                                     // initial value
                              false,
@@ -208,7 +213,7 @@ function createStates() {
                                  states: ['AutoDisabled','AutoOn','AutoOff','AutoOnOff']
                 		     }                     
                            );
-            
+
         } else {
             statename="Beleuchtung.Controllers."+lightspec[i].Name.replace(/ /g, "_")+".ControlMode";
             deleteState (statename);
@@ -226,48 +231,18 @@ function calcLightsControlPhase() {
     var tagesabschnitt = getState(TagesAbschnittId).val;
     var Helligkeit = getState(HelligkeitId).val;
     
-    var AktivPhase = 0; // 0=Inaktiv, 1=Aktiv
+    var AktivPhase = getState(ActivityPhaseId).val;
     
-    var AktivStart = "07:00"; // TODO: Von Variable holen und Wecker mit einbeziehen
-    var AktivEnde  = "22:00";
-    
-    _now = getTimeAsStr(new Date());
     var controlphase = 5; // Default Auto-Off
-    
-    
-    if (_now < AktivStart) {
-        dwmlog ("Vor Aktivphase",4);
-        AktivPhase=0;
-        if (Helligkeit > 2) controlphase = 5; else controlphase=4;
-    }
-    else if (_now < AktivEnde ) {
-        dwmlog ("In Aktivphase",4);
-        AktivPhase=1;
-        switch(Helligkeit) {
-            case 0: 
-                controlphase=1;
-                break;
-            case 1:
-                controlphase=2;
-                break;
-            case 2:
-                controlphase=3;
-                break;
-            default:
-                controlphase=5;
-        }        
-    } else {
-        dwmlog ("Nach Aktivphase",4);
-        AktivPhase=0;
-        if (Helligkeit > 2) controlphase = 5; else controlphase=4;
-    }
-    
-    if ( getState(LightsControlPhaseId) !== 0 ) { // PartyMode 
+
+    var ControlPhaseMap = [[4,4,4,5,5],[1,2,3,5,5]];
+    controlphase=ControlPhaseMap[AktivPhase][Helligkeit];    
+
+    if ( getState(LightsControlPhaseId) !== 0 || _now=="07:00") { // Keine Änderung im Partymode, Partymode wird um 07:00 zurückgesetzt.
         setState (LightsControlPhaseId,controlphase);
         dwmlog ("Licht-Kontroll-Modus für Tagesabschnitt "+tagesabschnitt+" ist "+controlphase,2);
     }
 }
-
 
 function LightsWatchAll() {
     var bereichresult=[];
@@ -366,6 +341,7 @@ function coupleControlModes() {
     for (i=0; i<lightspec.length; i++) {
         if ( lightspec[i].ControlModeId!==null) {
             if (lightspec[i].AutoOffCoupling) { // nur, wenn Auto-Modus für den Controller nicht abgeschaltet ist.
+                /*
                 switch (controlmode) {
                     case 0: // Partymode ... Immer AutoOn, wenns Dunkel ist.
                         if (Helligkeit < 3) 
@@ -385,6 +361,23 @@ function coupleControlModes() {
                         setState(lightspec[i].ControlModeId,2);
                         break;
                 }
+                */
+                setState(lightspec[i].ControlModeId,lightspec[i].ControlModeMap[controlmode]);
+            }
+        }
+    }
+}
+
+function coupleControlModes2() {
+    var Activity = getState(ActivityPhaseId).val;
+    var Helligkeit = getState(HelligkeitId).val;
+    
+    for (i=0; i<lightspec.length; i++) {
+        if ( lightspec[i].ControlModeId!==null) {
+            if (lightspec[i].AutoOffCoupling) { // nur, wenn Auto-Modus für den Controller nicht abgeschaltet ist.
+                var cm = lightspec[i].ControlModeMap2[Activity][HelligKeit];
+                
+                // setState(lightspec[i].ControlModeId,cm);
             }
         }
     }
@@ -413,11 +406,9 @@ function handleOffEvent(i) {
 /********************* Spezialfunktionen :) ***********************************/
 
 function setupEvents() {
-    schedule ("1 7,22 * * *", function() {
-         calcLightsControlPhase();
-    });
-    
     subscribe ({id: HelligkeitId, change:"ne"}, function(data){ calcLightsControlPhase(); });
+    subscribe ({id: ActivityPhaseId, change:"ne"}, function(data){ calcLightsControlPhase(); });
+    
     subscribe ({id: LightsControlPhaseId, change:"ne"}, function(data){ coupleControlModes(); });
     
     for (i=0; i<lightspec.length; i++) {

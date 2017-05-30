@@ -9,28 +9,20 @@
  * 
  */
 
-var debuglevel = 2;
+var debuglevel = 1;
 var debugchannel = 'info';
 
-function dwmlog( message, level, channel) {
-    if (typeof channel === 'undefined') {
-        channel = debugchannel;
-    }
-    if ( typeof level === 'undefined')
-    {
-        level = debuglevel;
-    }
-    if ( debuglevel >= level ) {
-        log (message, channel );
-    }
-}
+var AdapterId = "javascript.0";
 
 var OpenListHTML = "";
 var OpenListHTMLId = "TFStatus.ListeOffenHTML";
 var OpenCountId = "TFStatus.NumberOpen";
-var TFStatusEnableAlarmId = "TFStatus.EnableAlarm";
-var TFStatusEnableAlarm_Aussen = "TFStatus.EnableAlarmAussen";
-var TFStatusEnableAlarm_Aussentuer = "TFStatus.EnableAlarmAussentueren";
+var TFStatusEnableNotificationId = "TFStatus.EnableNotification";
+var TFStatusEnableNotification_Aussen = "TFStatus.EnableNotificationAussen";
+var TFStatusEnableNotification_Aussentuer = "TFStatus.EnableNotificationAussentueren";
+
+var TFStatusEnableSurveillanceId = AdapterId+".TFStatus.EnableSurveillance";
+var TFStatusEnableSurveillanceEGId = AdapterId+".TFStatus.EnableSurveillanceEG";
 
 var tfspec = [];
 var bereiche = [];
@@ -46,6 +38,7 @@ bereiche[6] = new createBereich ("Jagdzimmer");
 bereiche[7] = new createBereich ("Büro");
 bereiche[8] = new createBereich ("Bad EG");
 bereiche[9] = new createBereich ("Gästezimmer");
+bereiche[10] = new createBereich ("Speicher");
 
 // Spezifikationen der Türen Fenster mit Bereichszuordnung
 // Bad OG
@@ -64,12 +57,13 @@ tfspec[5] = new createTFspec ("Bürofenster rechts", [7], "hm-rpc.0.FEQ0052031.1
 tfspec[6] = new createTFspec ("Haustür",                        // Name
                               [0,1],                            // Bereiche
                               "hm-rpc.0.FEQ0080454.1.STATE"/*Haustüre:1.STATE*/,
-                              true,                             // löst Alarm aus
-                              900,                              // Alarm nach x Sekunden, 0 = dynamisch
-                              300,                              // Alarm-Intervall nach Erstauslösung
-                              TFStatusEnableAlarm_Aussentuer,   // Alarm-Enabler - Datapoint mit dem Alarm ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doAlarm(i)
+                              true,                             // löst Notification aus
+                              900,                              // Notification nach x Sekunden, 0 = dynamisch
+                              300,                              // Notification-Intervall nach Erstauslösung
+                              TFStatusEnableNotification_Aussentuer,   // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
+                              null                              // Callback, default ist doNotification(i)
                              );
+enableSurveillance(6);
 
 tfspec[7] = new createTFspec ("Vorhäusl-Fenster",[1],"hm-rpc.0.HEQ0106553.1.STATE"/*Fenster Vorhäusl:1.STATE*/);
 tfspec[8] = new createTFspec ("Innere Haustür",[1],"hm-rpc.0.HEQ0363077.1.STATE"/*Haustür innen:1.STATE*/, false, null, null);
@@ -100,57 +94,65 @@ tfspec[20]= new createTFspec ("Fenster Badezimmer EG (Ost)",[8],"hm-rpc.0.HEQ015
 tfspec[21] = new createTFspec ("Garagentor",                    // Name
                               [0],                              // Bereiche
                               "hm-rpc.0.HEQ0105861.1.STATE"/*Garagentor:1.STATE*/,
-                              true,                             // löst Alarm aus
-                              900,                              // Alarm nach x Sekunden, 0 = dynamisch
-                              300,                              // Alarm-Intervall nach Erstauslösung
-                              TFStatusEnableAlarm_Aussen,       // Alarm-Enabler - Datapoint mit dem Alarm ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doAlarm(i)
+                              true,                             // löst Notification aus
+                              900,                              // Notification nach x Sekunden, 0 = dynamisch
+                              300,                              // Notification-Intervall nach Erstauslösung
+                              TFStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
+                              null                              // Callback, default ist doNotification(i)
                              );
 
 tfspec[22] = new createTFspec ("Tür Hühnerstall",                // Name
                               [0],                              // Bereiche
                               "hm-rpc.0.MEQ0314148.1.STATE"/*Tür Hehnastoi:1.STATE*/,
-                              true,                             // löst Alarm aus
-                              900,                              // Alarm nach x Sekunden, 0 = dynamisch
-                              300,                              // Alarm-Intervall nach Erstauslösung
-                              TFStatusEnableAlarm_Aussen,       // Alarm-Enabler - Datapoint mit dem Alarm ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doAlarm(i)
+                              true,                             // löst Notification aus
+                              900,                              // Notification nach x Sekunden, 0 = dynamisch
+                              300,                              // Notification-Intervall nach Erstauslösung
+                              TFStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
+                              null                              // Callback, default ist doNotification(i)
                              );
+
+tfspec[23]= new createTFspec ("Speicher-Zugangsklappe",[1,10],"hm-rpc.0.JEQ0016562.1.STATE"/*Speicherklappe:1.STATE*/);
 
 //////////////// Ende Konfigurationsbereich ////////////////////////////////////
 
 // Für Experten: Timelimit wird berechnet, evt. abhängig von Aussentemperatur //
 
 function getLimitTime(i) {
-    var AlarmAfter = 180;
+    var NotificationAfter = 180;
     
     var temp = getState("hm-rpc.0.HEQ0237303.1.TEMPERATURE"/*Aussentemperatur Balkon:1.TEMPERATURE*/).val;
     
-    if (tfspec[i].TFAlarmAfter === 0) {
-        AlarmAfter = 15552000; // 180 Tage, also "ewig"
+    if (tfspec[i].TFNotificationAfter === 0) {
+        NotificationAfter = 15552000; // 180 Tage, also "ewig"
         
-        if (temp < 20.0 )  AlarmAfter = 3600;
-        if (temp < 15.0 )  AlarmAfter = 1800;
-        if (temp < 10.0 )  AlarmAfter = 1200;
-        if (temp < 5.0 )   AlarmAfter = 900;
-        if (temp < 0 )     AlarmAfter = 600;
-        if (temp < -5.0 )  AlarmAfter = 450;
-        if (temp < -10.0 ) AlarmAfter = 300;
+        if (temp < 20.0 )  NotificationAfter = 3600;
+        if (temp < 15.0 )  NotificationAfter = 1800;
+        if (temp < 10.0 )  NotificationAfter = 1200;
+        if (temp < 5.0 )   NotificationAfter = 900;
+        if (temp < 0 )     NotificationAfter = 600;
+        if (temp < -5.0 )  NotificationAfter = 450;
+        if (temp < -10.0 ) NotificationAfter = 300;
         
-        dwmlog ("Offen-Zeitraum für "+tfspec[i].Name+" wird nach Aussentemp. "+temp+" gesetzt: "+AlarmAfter,4);
+        dwmlog ("Offen-Zeitraum für "+tfspec[i].Name+" wird nach Aussentemp. "+temp+" gesetzt: "+NotificationAfter,4);
     } else {
-        AlarmAfter = tfspec[i].TFAlarmAfter;
+        NotificationAfter = tfspec[i].TFNotificationAfter;
     }
 
-    return AlarmAfter;
+    return NotificationAfter;
 }
 
-// Callback function to determine if window alarm should be sent.
+function enableSurveillance(i,EnablerId,HandlerOpen, HandlerClose) {
+    if (EnablerId === undefined ) tfspec[i].SurveinceEnabler = TFStatusEnableSurveillanceId; else tfspec[i].SurveinceEnabler = EnablerId;
+    if (HandlerOpen === undefined) tfspec[i].TFOnOpen = onOpenSurveillance; else tfspec[i].TFOnOpen = HandlerOpen;
+    if (HandlerClose === undefined) tfspec[i].TFOnClose = null; else tfspec[i].TFOnClose = HandlerClose;
+}
+
+// Callback function to determine if window Notification should be sent.
 // If modified, can be set to time windows etc.
-function doAlarm(i) {
-    var result = (getState(tfspec[i].TFAlarmEnabler).val) && (tfspec[i].TFAlarm);
+function doNotification(i) {
+    var result = (getState(tfspec[i].TFNotificationEnabler).val) && (tfspec[i].TFNotification);
     
-    dwmlog ("doAlarm für "+tfspec[i].Name+" Ergebnis:"+result,4);
+    dwmlog ("doNotification für "+tfspec[i].Name+" Ergebnis:"+result,4);
     return result;
 }
 
@@ -170,33 +172,34 @@ function createBereich ( Name ) {
  * Name: Name Tür oder Fenster
  * Bereiche: Array der Bereich-Indizes, zu denen das Fenster gehört
  * SensorOffen: Id des Sensors
- * TFAlarm: Alarmkonfig, soll Alarm bei zu Langem Offenstehen ausgelöst werden
+ * TFNotification: Notificationkonfig, soll Notification bei zu Langem Offenstehen ausgelöst werden
  */
-function createTFspec ( Name, Bereiche, SensorOffen, TFAlarm, TFAlarmAfter, TFAlarmInterval, TFAlarmEnabler, TFDoAlarmCallback ) {
+function createTFspec ( Name, Bereiche, SensorOffen, TFNotification, TFNotificationAfter, TFNotificationInterval, TFNotificationEnabler, TFDoNotificationCallback ) {
     this.Name = Name;
     this.Bereiche = Bereiche;
     this.SensorOffen = SensorOffen;
     
-    if (TFAlarm === undefined) this.TFAlarm=1; else this.TFAlarm=TFAlarm;
-    if (TFAlarmInterval === undefined) this.TFAlarmInterval=300; else this.TFAlarmInterval=TFAlarmInterval;
+    if (TFNotification === undefined) this.TFNotification=1; else this.TFNotification=TFNotification;
+    if (TFNotificationInterval === undefined) this.TFNotificationInterval=300; else this.TFNotificationInterval=TFNotificationInterval;
     
-    if (TFAlarmEnabler === undefined) this.TFAlarmEnabler="TFStatus.EnableAlarm"; else this.TFAlarmEnabler=TFAlarmEnabler;
-    if (TFDoAlarmCallback === undefined || TFDoAlarmCallback === null ) this.TFDoAlarmCallback=doAlarm; else this.TFDoAlarmCallback=TFDoAlarmCallback;
-    // dwmlog ("creating Alarm Callback ..."+this.TFDoAlarmCallback,4);
+    if (TFNotificationEnabler === undefined) this.TFNotificationEnabler="TFStatus.EnableNotification"; else this.TFNotificationEnabler=TFNotificationEnabler;
+    if (TFDoNotificationCallback === undefined || TFDoNotificationCallback === null ) this.TFDoNotificationCallback=doNotification; else this.TFDoNotificationCallback=TFDoNotificationCallback;
+    // dwmlog ("creating Notification Callback ..."+this.TFDoNotificationCallback,4);
     this.TFOnOpen=null;
     this.TFOnClose=null;
+    this.SurveillanceEnablerId=null;
     
-    // Alarm nach TFAlarmAfter Sekunden. Eine 0 heisst dynamisch bestimmt durch die getLimitTime Funktion.
-    if (TFAlarmAfter === undefined) this.TFAlarmAfter=0; else this.TFAlarmAfter=TFAlarmAfter;
+    // Notification nach TFNotificationAfter Sekunden. Eine 0 heisst dynamisch bestimmt durch die getLimitTime Funktion.
+    if (TFNotificationAfter === undefined) this.TFNotificationAfter=0; else this.TFNotificationAfter=TFNotificationAfter;
     this.state = getState (SensorOffen).val;
     if (this.state) {
         this.lastOpenTime = new Date();
     } else {
         this.lastOpenTime = null;
     }
-    
-    // Speichert die Zeit für den nächsten Alarm
-    this.nextAlarm=null;
+
+    // Speichert die Zeit für den nächsten Notification
+    this.nextNotification=null;
 }
 
 function setupStates() {
@@ -232,33 +235,44 @@ function setupStates() {
                );    
 
     createState( OpenCountId,  // name
-                 0,                                                     // initial value
+                 0,                         // initial value
+                 false,
                  { 
-                     type: 'number', 
+                     type: 'number'
     		     }                     
                );    
-    createState( TFStatusEnableAlarmId,  // name
+    createState( TFStatusEnableNotificationId,  // name
+                 true,                                                     // initial value
+                 false,
+                 { 
+                     type: 'boolean', 
+                     def:  true
+    		     }                     
+               );    
+    createState( TFStatusEnableNotification_Aussen,  // name
                  true,                                                     // initial value
                  { 
                      type: 'boolean', 
                      def:  true
     		     }                     
                );    
-    createState( TFStatusEnableAlarm_Aussen,  // name
+    createState( TFStatusEnableNotification_Aussentuer,  // name
                  true,                                                     // initial value
                  { 
                      type: 'boolean', 
                      def:  true
     		     }                     
-               );    
-    createState( TFStatusEnableAlarm_Aussentuer,  // name
-                 true,                                                     // initial value
-                 { 
-                     type: 'boolean', 
-                     def:  true
-    		     }                     
-               );    
-}
+               );
+    
+    createState( TFStatusEnableSurveillanceId,  // name
+                true,                                                     // initial value
+                false, 
+                { 
+                    type: 'boolean', 
+                    states:['Aus','An'],
+                    name: "Überwachungsfunktion: Gong bei Öffnen",
+    		    }                     
+    );}
 
 function setupEvents() {
     for (i=0; i<tfspec.length; i++) {
@@ -289,22 +303,24 @@ function TFWatchAll() {
         if (tfstate) {
             dwmlog ("Offen: "+tfspec[i].Name,3);
             addToOpenlist (i);
-            if (tfspec[i].nextAlarm === null ) {
+            if (tfspec[i].nextNotification === null ) {
                 dwmlog ("Fenster geöffnet ... "+tfspec[i].Name,4);
                 tfspec[i].lastOpenTime = now;
-                if (tfspec[i].TFAlarm) 
-                    tfspec[i].nextAlarm=new Date( now.getTime()+getLimitTime(i)*1000 );
+                if (tfspec[i].TFNotification) 
+                    tfspec[i].nextNotification=new Date( now.getTime()+getLimitTime(i)*1000 );
             }
             OpenCount++;
         } else {
             tfspec[i].lastOpenTime=null;
-            tfspec[i].nextAlarm=null;
+            tfspec[i].nextNotification=null;
         }
         tfspec[i].state=tfstate;
-        setState (OpenListHTMLId,OpenListHTML);
     }
+    if (getState(OpenListHTMLId).val != OpenListHTML)
+        setState (OpenListHTMLId,OpenListHTML);
+
     dwmlog ("TF Liste:"+JSON.stringify(tfspec),4);
-    setState (OpenCountId,OpenCount);
+    setState (OpenCountId, OpenCount);
     
     // Bereiche abspeichern
     for ( i=0; i<bereiche.length; i++ ) {
@@ -314,7 +330,7 @@ function TFWatchAll() {
     
     if (OpenCount>0) OpenTimeout=setTimeout (TFWatchAll,60000); 
     
-    treatOpenAlarm();
+    treatOpenNotification();
 }
 
 function addToOpenlist( i ) {
@@ -324,23 +340,23 @@ function addToOpenlist( i ) {
     OpenListHTML += tfspec[i].Name;
 }
 
-function treatOpenAlarm() {
+function treatOpenNotification() {
     var Message = "Fenster oder Türe steht offen:";
     var OpenCount = 0;
     var now = new Date();
 
-    dwmlog ("treatOpenAlarm entered",4);
+    dwmlog ("treatOpenNotification entered",4);
     for (i=0; i<tfspec.length; i++) {
-        if (tfspec[i].nextAlarm !== null) {
-            dwmlog ("treatOpenAlarm checking "+tfspec[i].Name,4);
-            if ( now.getTime() > tfspec[i].nextAlarm.getTime() ) {
-                dwmlog ("treatOpenAlarm: "+tfspec[i].Name+" ist Alarmkandidat");
-                if ( tfspec[i].TFDoAlarmCallback(i) ) {
-                // if ((getState(tfspec[i].TFAlarmEnabler).val) && (tfspec[i].TFAlarm) ) {
+        if (tfspec[i].nextNotification !== null) {
+            dwmlog ("treatOpenNotification checking "+tfspec[i].Name,4);
+            if ( now.getTime() > tfspec[i].nextNotification.getTime() ) {
+                dwmlog ("treatOpenNotification: "+tfspec[i].Name+" ist Notificationkandidat");
+                if ( tfspec[i].TFDoNotificationCallback(i) ) {
+                // if ((getState(tfspec[i].TFNotificationEnabler).val) && (tfspec[i].TFNotification) ) {
                     Message+=" "+tfspec[i].Name;
                     OpenCount++;
             
-                    tfspec[i].nextAlarm=new Date( now.getTime()+tfspec[i].TFAlarmInterval*1000 );
+                    tfspec[i].nextNotification=new Date( now.getTime()+tfspec[i].TFNotificationInterval*1000 );
                 }
             }
         }    
@@ -374,12 +390,18 @@ function TFEvent(data) {
     TFWatchAll();
 }
 
+function onOpenSurveillance(i) {
+    if (getState(tfspec[i]).SurveillanceEnablerId) {
+        GongSingle(); 
+    }
+}
+
 function anDaemmerung () {
-    setState (TFStatusEnableAlarm_Aussentuer,true);
+    setState (TFStatusEnableNotification_Aussentuer,true);
 }
 
 function ausDaemmerung () {
-    setState (TFStatusEnableAlarm_Aussentuer,false);
+    setState (TFStatusEnableNotification_Aussentuer,false);
 }
 
 // Ausführung!
