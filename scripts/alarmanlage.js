@@ -22,6 +22,11 @@ function createAlarmZone( Name, onEngaged, onDisengaged ) {
     // Handler
     this.onAlarmZoneEngaged = null;
     this.onAlarmZoneDisengaged = null;
+    
+    this.onAlarmZoneEnabled = null;
+    this.onAlarmZoneDisabled = null;
+    
+    this.onAlarmZoneTriggered = null;
 
     // return this;
 }
@@ -34,7 +39,7 @@ function createStates() {
                      { 
                         type: 'boolean', 
                         role: 'button', 
-                        name: "Löst die Alarmzone "+AlarmZonen[i].Name+" aus."
+                        name: "Schaltet die Alarmzone "+AlarmZonen[i].Name+" scharf."
         		     }                     
                    );
         createState( AlarmZonen[i].AlarmZoneDisengageId,                 // name
@@ -52,7 +57,7 @@ function createStates() {
                      { 
                         type: 'number', 
                         states: ['Aus','Scharf'],
-                        name: "Schaltet die Alarmzone ein und aus."
+                        name: "Schaltet die Alarmzone ein und aus. Geschaltet über Engage und Disengage."
         		     }                     
                    );
         createState( AlarmZonen[i].AlarmZoneStateId,                 // name
