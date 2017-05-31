@@ -24,6 +24,9 @@ var TFStatusEnableNotification_Aussentuer = "TFStatus.EnableNotificationAussentu
 var TFStatusEnableSurveillanceId = AdapterId+".TFStatus.EnableSurveillance";
 var TFStatusEnableSurveillanceEGId = AdapterId+".TFStatus.EnableSurveillanceEG";
 
+var AlarmZoneBase = "javascript.0.Alarmzonen";
+var EventListId =   "javascript.0.Ereignisse.Text";
+
 var tfspec = [];
 var bereiche = [];
 
@@ -152,6 +155,17 @@ function enableSurveillance(i,EnablerId,HandlerOpen, HandlerClose) {
     dwmlog ("Surveillance eingeschaltet für: "+tfspec[i].Name+" TFOnOpen: "+tfspec[i].TFOnOpen,4);
 }
 
+function enableAlarmZones(i,AlarmZones) {
+    tfspec[i].AlarmZones=AlarmZones;
+}
+
+function pushEvent(Kat, Text) {
+    if (EventListId === undefined || EventListId === null ) return;
+    var theText = Kat+" - "+Text;
+    // dwmlog ("Eventlist - adding "+theText,4);
+    setState (EventListId,theText);
+}
+
 // Callback function to determine if window Notification should be sent.
 // If modified, can be set to time windows etc.
 function doNotification(i) {
@@ -205,6 +219,9 @@ function createTFspec ( Name, Bereiche, SensorOffen, TFNotification, TFNotificat
 
     // Speichert die Zeit für den nächsten Notification
     this.nextNotification=null;
+    
+    // Alarmzonen, für die der Eintrag als Trigger dient.
+    this.AlarmZones = null;
 }
 
 function setupStates() {
@@ -346,7 +363,7 @@ function addToOpenlist( i ) {
 }
 
 function treatOpenNotification() {
-    var Message = "Fenster oder Türe steht offen:";
+    var Message = "Fenster oder Türe steht längere Zeit offen:";
     var OpenCount = 0;
     var now = new Date();
 
@@ -376,6 +393,7 @@ function treatOpenNotification() {
                 html:    "<h1>Warnung</h1><p>"+Message+"</p>"
         });
         setState ("sayit.0.tts.text",Message);
+        pushEvent ("WARNUNG",Message);
     }
 }
 
@@ -389,7 +407,19 @@ function TFEvent(data) {
             } else {
                  if (tfspec[i].TFOnClose !== null) tfspec[i].TFOnClose(i);
             }
-        }
+			if (tfspec[i].AlarmZones !== null) {
+				var action = "";
+				if (data.state.val) action = " wurde geöffnet!"; else action = " wurde geschlossen!";
+				
+				for (var j=0; j<tfspec[i].AlarmZones.length; j++) {
+					if (getState(AlarmZoneBase+"."+tfspec[i].AlarmZones[j]+".Enabler") == 2 ) {
+						pushEvent("ALARM",tfspec[i].Name+action);
+						setState(AlarmZoneBase+"."+tfspec[i].AlarmZones[j]+".Trigger",true);
+					}
+				}
+			}
+			break;
+		}
     }
 
     TFWatchAll();
@@ -399,7 +429,8 @@ function onOpenSurveillance(i) {
     dwmlog ("OnOpenSurveillance für "+tfspec[i].Name + " "+tfspec[i].SurveillanceEnablerId,4);
     
     if ( getState( tfspec[i].SurveillanceEnablerId ).val ) {
-        GongSingle(); 
+        GongSingle();
+        pushEvent("INFO",tfspec[i].Name+" wurde geöffnet, Gong ausgelöst.");
     }
 }
 

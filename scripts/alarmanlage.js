@@ -6,6 +6,15 @@ var AdapterId = "javascript.0";
 var AlarmZonen = [];
 var forceCreateStates = false;
 
+var EventListId = "Ereignisse.Text";
+function pushEvent(Kat, Text) {
+    if (EventListId === undefined || EventListId === null ) return;
+    var theText = Kat+" - "+Text;
+    // dwmlog ("Eventlist - adding "+theText,4);
+    setState (EventListId,theText);
+}
+
+
 AlarmZonen[0]=new createAlarmZone("Innensicherung",onAlarmEinbruch,onAlarmEinbruchOff);
 // AlarmZonen[0].onAlarmZoneDisengaged=checkSHAonDisengage;
 AlarmZonen[1]=new createAlarmZone("Aussensicherung 1",onAlarmEinbruch,onAlarmEinbruchOff);
@@ -117,17 +126,17 @@ function onAlarmEinbruch(i) {
     if ( getState(AlarmZonen[i].AlarmZoneEnableId).val == 2) {
         dwmlog ("Einbruchsalarm, Maßnahmen starten ...",4);
 
-        setState("hm-rpc.0.BidCoS-RF.4.PRESS_SHORT"/*HM-RCV-50 BidCoS-RF:4.PRESS_SHORT*/,true);
+        // setState("hm-rpc.0.BidCoS-RF.4.PRESS_SHORT"/*HM-RCV-50 BidCoS-RF:4.PRESS_SHORT*/,true);
     }    
 }
 
 function onAlarmEinbruchOff(i) {
     dwmlog ("EinbruchsAlarm - Maßnahmen werden beendet",2);    
 
-    setStateDelayed("hm-rpc.0.HEQ0104946.2.STATE"/*Gong EG:2.STATE*/,false,100);
-    setStateDelayed("hm-rpc.0.GEQ0303423.2.STATE"/*Gong OG:2.STATE*/,false,200);
-    setStateDelayed("hm-rpc.0.HEQ0104946.1.STATE"/*Gong EG:1.STATE*/,false,300);
-    setStateDelayed("hm-rpc.0.GEQ0303423.1.STATE"/*Gong OG:1.STATE*/,false,400);
+    // setStateDelayed("hm-rpc.0.HEQ0104946.2.STATE"/*Gong EG:2.STATE*/,false,100);
+    // setStateDelayed("hm-rpc.0.GEQ0303423.2.STATE"/*Gong OG:2.STATE*/,false,200);
+    // setStateDelayed("hm-rpc.0.HEQ0104946.1.STATE"/*Gong EG:1.STATE*/,false,300);
+    // setStateDelayed("hm-rpc.0.GEQ0303423.1.STATE"/*Gong OG:1.STATE*/,false,400);
 }
 
 function checkSHAonDisengage(i){
@@ -140,12 +149,14 @@ function checkSHAonDisengage(i){
         if ( AlarmZonen[i].SecCodeSHAArray[j] == theSHA ) {
             result = true;
             dwmlog ("checkSHAonDisengage: SHA index "+j+" stimmt überein!",2);
+            pushEvent("INFO","Code "+j+" erkannt für Abschaltung der Alarmzone "+AlarmZonen[i].Name);
             break;
         } 
     }
     
     if (!result) {
         dwmlog ("checkSHAonDisengage: Keine Übereinstimmung gefunden!",4);
+        pushEvent("WARNUNG","Fehleingabe des Codes!");
     }
     
     return result;
@@ -165,19 +176,29 @@ function createSubscribes() {
                 var doit = true;
                 if ( AlarmZonen[i].onAlarmZoneTriggered !== null) doit = AlarmZonen[i].onAlarmZoneTriggered(i);
                 if (doit) {
-                    dwmlog ("Alarmzone Auslösung Timer gestartet: "+AlarmZonen[i].Name,4);
+                    dwmlog ("Alarmzone Auslösung Timer prüfen: "+AlarmZonen[i].Name+" -> "+AlarmZonen[i].AlarmTimeout,4);
                     if (AlarmZonen[i].AlarmTimeout === null) {
-                        if (getState(AlarmZonen[i].AlarmZoneStateId).val != 2) setState(AlarmZonen[i].AlarmZoneStateId,1);
-                        AlarmZonen[i].AlarmTimeout = setTimeout (function(i) {
-                                if ( getState(AlarmZonen[i].AlarmZoneEnableId).val == 2) {
-                                    dwmlog ("Alarmzone ausgelöst: "+AlarmZonen[i].Name,4);
-                                    setState(AlarmZonen[i].AlarmZoneStateId,2);
-                                    AlarmZonen[i].AlarmTimeout === null;
-                                } else {
-                                    setState(AlarmZonen[i].AlarmZoneStateId,0);
-                                    AlarmZonen[i].AlarmTimeout = null;
-                                }
-                            },AlarmZonen[i].AlarmZoneTriggerDelay*1000,i);
+                        dwmlog ("Alarmzone Auslösung Timer gestartet: "+AlarmZonen[i].Name,4);
+						
+                        if (var Current = getState(AlarmZonen[i].AlarmZoneStateId).val != 2) {
+							// verzögerte Auslösung, triggered state
+							setState(AlarmZonen[i].AlarmZoneStateId,1);
+							AlarmZonen[i].AlarmTimeout = setTimeout (function(i) {
+									if ( getState(AlarmZonen[i].AlarmZoneEnableId).val == 2) {
+										dwmlog ("Alarmzone ausgelöst: "+AlarmZonen[i].Name,4);
+										setState(AlarmZonen[i].AlarmZoneStateId,2);
+										AlarmZonen[i].AlarmTimeout === null;
+									} else {
+										setState(AlarmZonen[i].AlarmZoneStateId,0);
+										AlarmZonen[i].AlarmTimeout === null;
+									}
+								},AlarmZonen[i].AlarmZoneTriggerDelay*1000,i);
+						} else 
+						if (Current == 2) {
+							// direkt Durchreichen, wenn Alarm schon gesetzt ist
+							setState(AlarmZonen[i].AlarmZoneStateId,2);	
+						}
+						
                     }
                 }
             }
@@ -212,7 +233,7 @@ function createSubscribes() {
                 }
             }
             var doit = true;
-            dwmlog ("Disengage: "+JSON.stringify(AlarmZonen[i]),4);
+            dwmlog ("Disengage: "+i,4);
             if (AlarmZonen[i].onAlarmZoneDisengaged !== null) {
                 doit = AlarmZonen[i].onAlarmZoneDisengaged(i);
             }
@@ -229,7 +250,7 @@ function createSubscribes() {
                     break;
                 }
             }
-            dwmlog("Hui Hui Hui in Zone "+i,2);
+            pushEvent("ALARM",AlarmZonen[i].Name+" wurde ausgelöst.");
             
             if (AlarmZonen[i].onAlarmZoneAlarm !== null ) AlarmZonen[i].onAlarmZoneAlarm(i);
         });
@@ -245,6 +266,7 @@ function createSubscribes() {
             if (data.oldState.val==2) {
                 if (AlarmZonen[i].onAlarmZoneOff !== null ) 
                     AlarmZonen[i].onAlarmZoneOff(i);
+                pushEvent("WARNUNG",AlarmZonen[i].Name+" wurde nach Auslösung zurückgesetzt.");
             }
         });
         
@@ -256,8 +278,23 @@ function createSubscribes() {
             }            
             if (getState(AlarmZonen[i].AlarmZoneStateId).val != 0) {
                 setState (AlarmZonen[i].AlarmZoneStateId,0);
-            }
+                if (AlarmZonen[i].AlarmTimeout !== null) {
+                    clearTimeout(AlarmZonen[i].AlarmTimeout);
+                    AlarmZonen[i].AlarmTimeout=null;
+                }
+                pushEvent("WARNUNG",AlarmZonen[i].Name+" wurde nach Auslösung unscharf gestellt.");
+            } else pushEvent("INFO",AlarmZonen[i].Name+" wurde unscharf gestellt.");
         });
+
+        subscribe ({id: AdapterId+"."+AlarmZonen[i].AlarmZoneEnableId, val:2, change:"ne"},function(data){
+            for (var i=0; i<AlarmZonen.length; i++) {
+                if (data.id == AdapterId+"."+AlarmZonen[i].AlarmZoneEnableId ) {
+                    break;
+                }
+            }            
+            pushEvent("INFO",AlarmZonen[i].Name+" wurde scharfgestellt.");
+        });
+
     } // for all AlarmZonen
 }
 

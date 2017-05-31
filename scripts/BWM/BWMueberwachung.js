@@ -12,6 +12,15 @@
 var debuglevel = 4;
 var debugchannel = 'info';
 
+var EventListId =   "javascript.0.Ereignisse.Text";
+
+function pushEvent(Kat, Text) {
+    if (EventListId === undefined || EventListId === null ) return;
+    var theText = Kat+" - "+Text;
+    // dwmlog ("Eventlist - adding "+theText,4);
+    setState (EventListId,theText);
+}
+
 var AdapterId = "javascript.0";
 
 var MovingListHTML = "";
@@ -79,6 +88,12 @@ function createBWMspec ( Name, Bereiche, Id ) {
     } else {
         this.lastMovingTime = null;
     }
+	
+	this.AlarmZones = null;
+}
+
+function enableAlarmZones(i,AlarmZones) {
+    BWMspec[i].AlarmZones=AlarmZones;
 }
 
 function setupStates() {
@@ -196,8 +211,20 @@ function BWMEvent(data) {
             } else {
                  // if (BWMspec[i].BWMOnClose !== null) BWMspec[i].BWMOnClose(i);
             }
-        }
-    }
+			if (BWMspec[i].AlarmZones !== null) {
+				var action = "";
+				if (data.state.val) action = " wurde geöffnet!"; else action = " wurde geschlossen!";
+				
+				for (var j=0; j<BWMspec[i].AlarmZones.length; j++) {
+					if (getState(AlarmZoneBase+"."+BWMspec[i].AlarmZones[j]+".Enabler") == 2 ) {
+						pushEvent("ALARM","Bewegung "+BWMspec[i].Name+action);
+						setState(AlarmZoneBase+"."+BWMspec[i].AlarmZones[j]+".Trigger",true);
+					}
+				}
+			}
+			break;
+		}	
+	}
 
     BWMWatchAll();
 }
