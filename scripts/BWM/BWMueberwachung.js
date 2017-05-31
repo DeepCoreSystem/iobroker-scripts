@@ -9,19 +9,14 @@
  * 
  */
 
-var debuglevel = 1;
+var debuglevel = 4;
 var debugchannel = 'info';
 
 var AdapterId = "javascript.0";
 
 var MovingListHTML = "";
-var MovingListHTMLId = "BWMStatus.ListeOffenHTML";
+var MovingListHTMLId = "BWMStatus.ListeBewegungHTML";
 var MovingCountId = "BWMStatus.NumberMoving";
-var BWMStatusEnableNotificationId = "BWMStatus.EnableNotification";
-var BWMStatusEnableNotification_Aussen = "BWMStatus.EnableNotificationAussen";
-
-// var BWMStatusEnableSurveillanceId = AdapterId+".BWMStatus.EnableSurveillance";
-// var BWMStatusEnableSurveillanceEGId = AdapterId+".BWMStatus.EnableSurveillanceEG";
 
 var BWMspec = [];
 var bereiche = [];
@@ -29,111 +24,29 @@ var bereiche = [];
 // Bereichsspezifikationen
 bereiche[0] = new createBereich ("Aussenbereich");
 bereiche[1] = new createBereich ("Zentralbereich");
-bereiche[2] = new createBereich ("Wohnbereich OG");
-bereiche[3] = new createBereich ("Schlafen OG");
-bereiche[4] = new createBereich ("Bad OG");
-bereiche[5] = new createBereich ("Medien OG");
-bereiche[6] = new createBereich ("Jagdzimmer");
-bereiche[7] = new createBereich ("Büro");
-bereiche[8] = new createBereich ("Bad EG");
-bereiche[9] = new createBereich ("Gästezimmer");
-bereiche[10] = new createBereich ("Speicher");
+bereiche[2] = new createBereich ("Keller");
+bereiche[3] = new createBereich ("Bad OG");
+// bereiche[4] = new createBereich ("Bad EG");
 
-// Spezifikationen der Türen Fenster mit Bereichszuordnung
-// Bad OG
-BWMspec[0] = new createBWMspec ("Fenster Bad OG (Nord)", [4], "hm-rpc.0.IEQ0204565.1.STATE"/*Fenster Badezimmer OG (Nord):1.STATE*/);
-
-// Wohnbereich OG
-BWMspec[1] = new createBWMspec ("Balkontür", [2], "hm-rpc.0.FEQ0080216.1.STATE"/*Balkontür:1.STATE*/);
-BWMspec[2] = new createBWMspec ("Küchenfenster", [2], "hm-rpc.0.LEQ0920193.1.STATE"/*Fenster Küche OG:1.STATE*/);
-
-// Büro
-BWMspec[3] = new createBWMspec ("Bürofenster links",[7], "hm-rpc.0.FEQ0052060.1.STATE"/*Fenster EG Wohnzimmer (links):1.STATE*/);
-BWMspec[4] = new createBWMspec ("Bürofenster Mitte",[7], "hm-rpc.0.FEQ0052087.1.STATE"/*Fenster EG Wohnzimmer (Mitte):1.STATE*/);
-BWMspec[5] = new createBWMspec ("Bürofenster rechts", [7], "hm-rpc.0.FEQ0052031.1.STATE"/*Fenster EG Wohnzimmer (rechts):1.STATE*/);
+// Spezifikationen der Bewegungsmelder mit Bereichszuordnung
+// Aussenbereich
+BWMspec[0] = new createBWMspec ("Aussenbereich Eingang", [0], "hm-rpc.0.GEQ0127344.1.MOTION"/*Bewegung Aussenbereich Haustür:1.MOTION*/);
+BWMspec[1] = new createBWMspec ("Aussenbereich Terasse", [0], "hm-rpc.0.JEQ0128208.1.MOTION"/*Bewegung Terasse:1.MOTION*/);
+BWMspec[2] = new createBWMspec ("Aussenbereich Ost",[0], "hm-rpc.0.JEQ0128202.1.MOTION"/*Bewegung Ost:1.MOTION*/);
+BWMspec[3] = new createBWMspec ("Aussenbereich Nord",[0], "hm-rpc.0.LEQ0416445.1.MOTION"/*Bewegung Nord:1*/);
+BWMspec[4] = new createBWMspec ("Aussenbereich West",[0], "hm-rpc.0.JEQ0128191.1.MOTION"/*Bewegung West:1.MOTION*/);
 
 // Zentralbereich
-BWMspec[6] = new createBWMspec ("Haustür",                        // Name
-                              [0,1],                            // Bereiche
-                              "hm-rpc.0.FEQ0080454.1.STATE"/*Haustüre:1.STATE*/,
-                              true,                             // löst Notification aus
-                              900,                              // Notification nach x Sekunden, 0 = dynamisch
-                              300,                              // Notification-Intervall nach Erstauslösung
-                              BWMStatusEnableNotification_Aussentuer,   // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doNotification(i)
-                             );
-enableSurveillance(6);
+BWMspec[5] = new createBWMspec ("Hausgang (Eingang)",[1], "hm-rpc.0.MEQ0670341.3.MOTION"/*Bewegungsmelder Hausgang EG West.MOTION*/);
+BWMspec[6] = new createBWMspec ("Hausgang",[1],"hm-rpc.0.GEQ0128067.1.MOTION"/*Bewegung EG Gang:1.MOTION*/);
+BWMspec[7] = new createBWMspec ("Diele OG",[1], "hm-rpc.0.GEQ0127607.1.MOTION"/*Bewegung OG Diele:1.MOTION*/);
 
-BWMspec[7] = new createBWMspec ("Vorhäusl-Fenster",[1],"hm-rpc.0.HEQ0106553.1.STATE"/*Fenster Vorhäusl:1.STATE*/);
-BWMspec[8] = new createBWMspec ("Innere Haustür",[1],"hm-rpc.0.HEQ0363077.1.STATE"/*Haustür innen:1.STATE*/, false, null, null);
-BWMspec[9] = new createBWMspec ("Gang-Fenster",[1],"hm-rpc.0.JEQ0217258.1.STATE"/*Fenster EG Hausgang:1.STATE*/);
-BWMspec[10]= new createBWMspec ("Tür Kellertreppe",[1],"hm-rpc.0.HEQ0362893.1.STATE"/*Tür Kellertreppe:1.STATE*/);
-BWMspec[11]= new createBWMspec ("Kellertür Aussen",[0,1],"hm-rpc.0.MEQ0369609.1.STATE"/*Kellertreppe Aussen:1.STATE*/);
-enableSurveillance(11);
+// Keller
+BWMspec[8] = new createBWMspec ("Kellertreppe",[1,2],"hm-rpc.0.GEQ0128297.1.MOTION"/*Bewegung Kellertreppe:1.MOTION*/);
+BWMspec[9] = new createBWMspec ("Kellervorraum (Getränke)",[2],"hm-rpc.0.MEQ1848804.3.MOTION"/*Taster Bewegung Kellervorraum:3.MOTION*/);
 
-BWMspec[12]= new createBWMspec ("Fenster Computerraum",[1],"hm-rpc.0.IEQ0058618.1.STATE"/*Fenster Computerraum.STATE*/);
-
-// Jagdzimmer
-BWMspec[13]= new createBWMspec ("Fenster Jagdzimmer (Front)", [6], "hm-rpc.0.HEQ0119782.1.STATE"/*Fenster EG Stüberl (Front):1.STATE*/);
-BWMspec[14]= new createBWMspec ("Fenster Jagdzimmer (Haustür)",[6],"hm-rpc.0.HEQ0160028.1.STATE"/*Fenster EG Stüberl (Haustür):1.STATE*/);
-
-// Gästezimmer
-BWMspec[15]= new createBWMspec ("Fenster Gästezimmer (Links)",[9],"hm-rpc.0.FEQ0051906.1.STATE"/*Fenster EG Schlafzimmer (links):1.STATE*/);
-BWMspec[16]= new createBWMspec ("Fenster Gästezimmer (Rechts)",[9],"hm-rpc.0.FEQ0051864.1.STATE"/*Fenster EG Schlafzimmer (rechts):1.STATE*/);
-
-// Medien OG
-BWMspec[17]= new createBWMspec ("Fenster Medienzimmer (Nord)",[5],"hm-rpc.0.MEQ0175031.1.STATE"/*Fenster OG Medienraum (Nord):1.STATE*/);
-
-// Schlafen OG
-BWMspec[18]= new createBWMspec ("Schlafzimmer-Fenster",[3],"hm-rpc.0.HEQ0159933.1.STATE"/*Fenster OG Schlafzimmer:1.STATE*/);
-
-// Bad EG
-BWMspec[19]= new createBWMspec ("Fenster Badezimmer EG (Nord)",[8],"hm-rpc.0.HEQ0363208.1.STATE"/*Fenster EG Badezimmer (Nord):1.STATE*/);
-BWMspec[20]= new createBWMspec ("Fenster Badezimmer EG (Ost)",[8],"hm-rpc.0.HEQ0159828.1.STATE"/*Fenster EG Badezimmer:1.STATE*/);
-
-// Aussenbereich
-BWMspec[21] = new createBWMspec ("Garagentor",                    // Name
-                              [0],                              // Bereiche
-                              "hm-rpc.0.HEQ0105861.1.STATE"/*Garagentor:1.STATE*/,
-                              true,                             // löst Notification aus
-                              900,                              // Notification nach x Sekunden, 0 = dynamisch
-                              300,                              // Notification-Intervall nach Erstauslösung
-                              BWMStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doNotification(i)
-                             );
-enableSurveillance(21);
-
-BWMspec[22] = new createBWMspec ("Tür Hühnerstall",                // Name
-                              [0],                              // Bereiche
-                              "hm-rpc.0.MEQ0314148.1.STATE"/*Tür Hehnastoi:1.STATE*/,
-                              true,                             // löst Notification aus
-                              900,                              // Notification nach x Sekunden, 0 = dynamisch
-                              300,                              // Notification-Intervall nach Erstauslösung
-                              BWMStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
-                              null                              // Callback, default ist doNotification(i)
-                             );
-enableSurveillance(22);
-
-BWMspec[23]= new createBWMspec ("Speicher-Zugangsklappe",[1,10],"hm-rpc.0.JEQ0016562.1.STATE"/*Speicherklappe:1.STATE*/);
-
-//////////////// Ende Konfigurationsbereich ////////////////////////////////////
-
-
-function enableSurveillance(i,EnablerId,HandlerMoving, HandlerClose) {
-    if (EnablerId === undefined ) BWMspec[i].SurveillanceEnablerId = BWMStatusEnableSurveillanceId; else BWMspec[i].SurveillanceEnablerId = EnablerId;
-    if (HandlerMoving === undefined) BWMspec[i].BWMOnMoving = onMovingSurveillance; else BWMspec[i].BWMOnMoving = HandlerMoving;
-    if (HandlerClose === undefined) BWMspec[i].BWMOnClose = null; else BWMspec[i].BWMOnClose = HandlerClose;
-    dwmlog ("Surveillance eingeschaltet für: "+BWMspec[i].Name+" BWMOnMoving: "+BWMspec[i].BWMOnMoving,4);
-}
-
-// Callback function to determine if window Notification should be sent.
-// If modified, can be set to time windows etc.
-function doNotification(i) {
-    var result = (getState(BWMspec[i].BWMNotificationEnabler).val) && (BWMspec[i].BWMNotification);
-    
-    dwmlog ("doNotification für "+BWMspec[i].Name+" Ergebnis:"+result,4);
-    return result;
-}
+// Bad OG
+BWMspec[10] = new createBWMspec("Bad OG",[3],"hm-rpc.0.JEQ0128709.1.MOTION"/*Bewegung Nord Kaputt:1.MOTION*/);
 
 // Start Code //////////////////////////////////////////////////////////////////
 
@@ -148,10 +61,9 @@ function createBereich ( Name ) {
 }
 
 /**
- * Name: Name Tür oder Fenster
- * Bereiche: Array der Bereich-Indizes, zu denen das Fenster gehört
+ * Name: Name Bewegungsmelder
+ * Bereiche: Array der Bereich-Indizes, zu denen der BWM gehört
  * Id: Id des Sensors
- * BWMNotification: Notificationkonfig, soll Notification bei zu Langem Offenstehen ausgelöst werden
  */
 function createBWMspec ( Name, Bereiche, Id ) {
     this.Name = Name;
@@ -160,8 +72,7 @@ function createBWMspec ( Name, Bereiche, Id ) {
         
     // dwmlog ("creating Notification Callback ..."+this.BWMDoNotificationCallback,4);
     this.BWMOnMoving=null;
-    this.SurveillanceEnablerId=null;
-    
+
     this.state = getState (Id).val;
     if (this.state) {
         this.lastMovingTime = new Date();
@@ -196,7 +107,7 @@ function setupStates() {
     // Liste der Bewegungsmelder mit Movement
     createState( MovingListHTMLId,  // name
                  "",                                                     // initial value
-                 false,                                                  // force createion
+                 true,                                                  // force createion
                  { 
                      type: 'string', 
     		     }                     
@@ -262,7 +173,10 @@ function BWMWatchAll() {
         setState("Bereiche."+bereiche[i].Name.replace(/ /g, "_")+".Bewegung",bereichresult[i]);
     }
     
-    if (MovingCount>0) MovingTimeout=setTimeout (BWMWatchAll,30000);     
+    if (MovingCount>0) {
+        MovingTimeout=setTimeout (BWMWatchAll,30000);
+        setState("Bereiche.Gesamt.Bewegung",1);
+    } else setState("Bereiche.Gesamt.Bewegung",0);
 }
 
 function addToMovinglist( i ) {

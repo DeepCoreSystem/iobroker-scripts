@@ -6,7 +6,11 @@ var AdapterId = "javascript.0";
 var AlarmZonen = [];
 var forceCreateStates = false;
 
-AlarmZonen[0]=new createAlarmZone("Innensicherung",null,null);
+AlarmZonen[0]=new createAlarmZone("Innensicherung",onAlarmEinbruch,onAlarmEinbruchOff);
+// AlarmZonen[0].onAlarmZoneDisengaged=checkSHAonDisengage;
+AlarmZonen[1]=new createAlarmZone("Aussensicherung 1",onAlarmEinbruch,onAlarmEinbruchOff);
+AlarmZonen[2]=new createAlarmZone("Aussensicherung 2",onAlarmEinbruch,onAlarmEinbruchOff);
+
 
 function createAlarmZone( Name, onZoneAlarm, onZoneAlarmOff ) {
     this.Name = Name;
@@ -76,7 +80,7 @@ function createStates() {
         		     }                     
                    );
         createState( AlarmZonen[i].AlarmZoneEnableId,                 // name
-                     false,    // initial value
+                     0,    // initial value
                      forceCreateStates,     // kein "Force-Create"
                      { 
                         type: 'number', 
@@ -85,7 +89,7 @@ function createStates() {
         		     }                     
                    );
         createState( AlarmZonen[i].AlarmZoneStateId,                 // name
-                     false,    // initial value
+                     0,    // initial value
                      forceCreateStates,     // kein "Force-Create"
                      { 
                         type: 'number', 
@@ -96,17 +100,34 @@ function createStates() {
     }
 }
 
-AlarmZonen[0].onAlarmZoneDisengaged=checkSHAonDisengage;
 
 // Default handler (sehr einfache Mail-Benachrichtigung)
 function onAlarmDefault(i) {
-    if ( getState(AlarmZone[i].AlarmZoneEnableId).val == 2) {
+    if ( getState(AlarmZonen[i].AlarmZoneEnableId).val == 2) {
         sendTo("email", {
                 from:    '"Haussteuerung (IOBroker)" <infrastructure@dondl.de>',
                 subject: "ALARM: Alarmzone "+AlarmZone[i].Name+" ausgelöst!",
                 html:    "<h1>Alarm</h1><p>Alarmzone "+AlarmZone[i].Name+" ausgelöst!</p>"
         });
     }
+}
+
+function onAlarmEinbruch(i) {
+    dwmlog ("Einbruchsalarm ausgelöst, Maßnahmen für Zone "+i,2);    
+    if ( getState(AlarmZonen[i].AlarmZoneEnableId).val == 2) {
+        dwmlog ("Einbruchsalarm, Maßnahmen starten ...",4);
+
+        setState("hm-rpc.0.BidCoS-RF.4.PRESS_SHORT"/*HM-RCV-50 BidCoS-RF:4.PRESS_SHORT*/,true);
+    }    
+}
+
+function onAlarmEinbruchOff(i) {
+    dwmlog ("EinbruchsAlarm - Maßnahmen werden beendet",2);    
+
+    setStateDelayed("hm-rpc.0.HEQ0104946.2.STATE"/*Gong EG:2.STATE*/,false,100);
+    setStateDelayed("hm-rpc.0.GEQ0303423.2.STATE"/*Gong OG:2.STATE*/,false,200);
+    setStateDelayed("hm-rpc.0.HEQ0104946.1.STATE"/*Gong EG:1.STATE*/,false,300);
+    setStateDelayed("hm-rpc.0.GEQ0303423.1.STATE"/*Gong OG:1.STATE*/,false,400);
 }
 
 function checkSHAonDisengage(i){
@@ -203,13 +224,14 @@ function createSubscribes() {
         
         // DoIt - Alarm!
         subscribe({id: AdapterId+"."+AlarmZonen[i].AlarmZoneStateId, val:2}, function(data) {
-            dwmlog("Hui Hui Hui",2);
             for (var i=0; i<AlarmZonen.length; i++) {
                 if (data.id == AdapterId+"."+AlarmZonen[i].AlarmZoneStateId ) {
                     break;
                 }
             }
-            if (AlarmZonen[i].onAlarmZoneAlarm !== null ) AlarmZonen[i].onAlarmZoneAlarm();
+            dwmlog("Hui Hui Hui in Zone "+i,2);
+            
+            if (AlarmZonen[i].onAlarmZoneAlarm !== null ) AlarmZonen[i].onAlarmZoneAlarm(i);
         });
         
         // Stop the Alarm
@@ -222,9 +244,20 @@ function createSubscribes() {
             }            
             if (data.oldState.val==2) {
                 if (AlarmZonen[i].onAlarmZoneOff !== null ) 
-                    AlarmZonen[i].onAlarmZoneOff();
+                    AlarmZonen[i].onAlarmZoneOff(i);
             }
-        });        
+        });
+        
+        subscribe ({id: AdapterId+"."+AlarmZonen[i].AlarmZoneEnableId, val:0, change:"ne"},function(data){
+            for (var i=0; i<AlarmZonen.length; i++) {
+                if (data.id == AdapterId+"."+AlarmZonen[i].AlarmZoneEnableId ) {
+                    break;
+                }
+            }            
+            if (getState(AlarmZonen[i].AlarmZoneStateId).val != 0) {
+                setState (AlarmZonen[i].AlarmZoneStateId,0);
+            }
+        });
     } // for all AlarmZonen
 }
 

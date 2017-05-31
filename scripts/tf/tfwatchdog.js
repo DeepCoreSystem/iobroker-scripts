@@ -70,6 +70,8 @@ tfspec[8] = new createTFspec ("Innere Haustür",[1],"hm-rpc.0.HEQ0363077.1.STATE
 tfspec[9] = new createTFspec ("Gang-Fenster",[1],"hm-rpc.0.JEQ0217258.1.STATE"/*Fenster EG Hausgang:1.STATE*/);
 tfspec[10]= new createTFspec ("Tür Kellertreppe",[1],"hm-rpc.0.HEQ0362893.1.STATE"/*Tür Kellertreppe:1.STATE*/);
 tfspec[11]= new createTFspec ("Kellertür Aussen",[0,1],"hm-rpc.0.MEQ0369609.1.STATE"/*Kellertreppe Aussen:1.STATE*/);
+enableSurveillance(11);
+
 tfspec[12]= new createTFspec ("Fenster Computerraum",[1],"hm-rpc.0.IEQ0058618.1.STATE"/*Fenster Computerraum.STATE*/);
 
 // Jagdzimmer
@@ -100,6 +102,7 @@ tfspec[21] = new createTFspec ("Garagentor",                    // Name
                               TFStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
                               null                              // Callback, default ist doNotification(i)
                              );
+enableSurveillance(21);
 
 tfspec[22] = new createTFspec ("Tür Hühnerstall",                // Name
                               [0],                              // Bereiche
@@ -110,6 +113,7 @@ tfspec[22] = new createTFspec ("Tür Hühnerstall",                // Name
                               TFStatusEnableNotification_Aussen,       // Notification-Enabler - Datapoint mit dem Notification ein/ausgeschaltet werden kann
                               null                              // Callback, default ist doNotification(i)
                              );
+enableSurveillance(22);
 
 tfspec[23]= new createTFspec ("Speicher-Zugangsklappe",[1,10],"hm-rpc.0.JEQ0016562.1.STATE"/*Speicherklappe:1.STATE*/);
 
@@ -142,9 +146,10 @@ function getLimitTime(i) {
 }
 
 function enableSurveillance(i,EnablerId,HandlerOpen, HandlerClose) {
-    if (EnablerId === undefined ) tfspec[i].SurveinceEnabler = TFStatusEnableSurveillanceId; else tfspec[i].SurveinceEnabler = EnablerId;
+    if (EnablerId === undefined ) tfspec[i].SurveillanceEnablerId = TFStatusEnableSurveillanceId; else tfspec[i].SurveillanceEnablerId = EnablerId;
     if (HandlerOpen === undefined) tfspec[i].TFOnOpen = onOpenSurveillance; else tfspec[i].TFOnOpen = HandlerOpen;
     if (HandlerClose === undefined) tfspec[i].TFOnClose = null; else tfspec[i].TFOnClose = HandlerClose;
+    dwmlog ("Surveillance eingeschaltet für: "+tfspec[i].Name+" TFOnOpen: "+tfspec[i].TFOnOpen,4);
 }
 
 // Callback function to determine if window Notification should be sent.
@@ -380,9 +385,9 @@ function TFEvent(data) {
         if (data.id == tfspec[i].SensorOffen) {
             dwmlog ("Event: TF identifiziert: "+i+" -> "+tfspec[i].Name,4);
             if (data.state.val) {
-                if (tfspec[i].TFOnOpen !== null) tfspec[i].TFOnOpen();
+                if (tfspec[i].TFOnOpen !== null) tfspec[i].TFOnOpen(i);
             } else {
-                 if (tfspec[i].TFOnClose !== null) tfspec[i].TFOnClose();
+                 if (tfspec[i].TFOnClose !== null) tfspec[i].TFOnClose(i);
             }
         }
     }
@@ -391,7 +396,9 @@ function TFEvent(data) {
 }
 
 function onOpenSurveillance(i) {
-    if (getState(tfspec[i]).SurveillanceEnablerId) {
+    dwmlog ("OnOpenSurveillance für "+tfspec[i].Name + " "+tfspec[i].SurveillanceEnablerId,4);
+    
+    if ( getState( tfspec[i].SurveillanceEnablerId ).val ) {
         GongSingle(); 
     }
 }

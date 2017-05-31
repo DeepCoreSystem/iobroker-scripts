@@ -3,20 +3,6 @@ var debugchannel = 'info';
 
 var rollos = [];
 
-
-function dwmlog( message, level, channel) {
-    if (typeof channel === 'undefined') {
-        channel = debugchannel;
-    }
-    if ( typeof level === 'undefined')
-    {
-        level = debuglevel;
-    }
-    if ( debuglevel >= level ) {
-        log (message, channel );
-    }
-}
-
 var rollosall = {   
                 ID_Aussentemperatur: "hm-rpc.0.HEQ0237303.1.TEMPERATURE",
                 ID_Feiertag: "feiertage.0.heute.boolean",    
@@ -382,7 +368,7 @@ function RolloAllOp() {
 
 function setupTempAuto() {
     for ( var i = 0; i<rollos.length; i++) {
-        subscribe({id: rollos[i].ID_RolloMotion, val:0 }, function(data) {
+        subscribe({id: rollos[i].ID_RolloMotion, val:false }, function(data) {
             dwmlog ("Rollo "+data.name+" stopped motion.",4);
             for (var j = 0; j<rollos.length; j++) {
                 if ( rollos[j].ID_RolloMotion == data.id) {
