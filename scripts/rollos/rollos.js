@@ -10,190 +10,138 @@ var rollosall = {
                 ID_Tagesabschnitt: "javascript.0.Sonnenstand.Tagesabschnitt",
                 ID_Helligkeit: "javascript.0.Helligkeit.Helligkeitsstufe"
 };
+
+rollos[0] = new createRollo("Schlafzimmer OG","hm-rpc.0.IEQ0148648.1.LEVEL","07:30","09:30");
+rollos[0].ID_Rollokontrolle="Rollos.SchlafzimmerOG";
+setWindow(0,"hm-rpc.0.HEQ0159933.1.STATE");
+addLight(0,"hm-rpc.0.GEQ0210167.1.LEVEL");
+addLight(0,"hm-rpc.0.GEQ0210167.2.LEVEL");
+addLight(0,"hm-rpc.0.IEQ0090665.1.STATE");
+enableInsektenschutz(0,45);
+
+rollos[1] = new createRollo("Bad OG","hm-rpc.0.JEQ0117120.1.LEVEL","07:31","09:31");
+rollos[1].ID_Rollokontrolle="Rollos.BadOG";
+addLight(1,"hm-rpc.0.LEQ1318091.1.LEVEL");
+
+rollos[2] = new createRollo ("Küche OG","hm-rpc.0.IEQ0079678.1.LEVEL","07:00");
+rollos[2].ID_Rollokontrolle = "Rollos.KuecheOG";
+setWindow(2,"hm-rpc.0.LEQ0920193.1.STATE");
+addLight(2,"hm-rpc.0.IEQ0541192.1.STATE");
+
+rollos[3] = new createRollo ("Medienraum OG (Nord)","hm-rpc.0.IEQ0079554.1.LEVEL","07:01");
+rollos[3].ID_Rollokontrolle = "Rollos.Medienraum_Nord";
+setWindow(3,"hm-rpc.0.MEQ0175031.1.STATE");
+addLight(3,"hm-rpc.0.IEQ0039909.1.LEVEL");
+
+rollos[4] = new createRollo("Medienraum OG (Ost)","hm-rpc.0.IEQ0080208.1.LEVEL","07:02");
+rollos[4].ID_Rollokontrolle = "Rollos.Medienraum_Ost";
+addLight(4,"hm-rpc.0.IEQ0039909.1.LEVEL");
+
+
+/************* code part, change only if you know what you do ***************************/
+
+setOpDelays();
+dwmlog ("Konfiguration definiert mit "+rollos.length+" Einträgen: <br/>"+JSON.stringify(rollos),3);
+
+
+function createRollo(Name, IdRollo, ZeitWerktag, ZeitFeiertag ) {
+	this.Name = Name;
+	
+	if (ZeitWerktag === undefined) this.Oeffnungszeit_Werktag = "07:00"; else this.Oeffnungszeit_Werktag=ZeitWerktag;
+	if (ZeitFeiertag === undefined) this.Oeffnungszeit_Feiertag=this.Oeffnungszeit_Werktag; else this.Oeffnungszeit_Feiertag=ZeitFeiertag;
+		
+	this.OpenSchedule = calcSchedule ([this.Oeffnungszeit_Werktag,this.Oeffnungszeit_Feiertag]);
+	
+	this.LimitAussentemperatur = 5.0;
+	this.Helligkeitslevel1 = 1;
+	this.Helligkeitslevel2 = 2;
+	
+	this.ID_Fenster = null;
+	this.ID_Rollo = IdRollo;
+	this.ID_RolloMotion =  this.ID_Rollo.replace(".1.LEVEL",".1.WORKING");
+	
+	this.ID_Licht = [];
+	this.ID_Rollokontrolle = "Rollos."+this.Name.replace(/ /g, "_");
+	
+	this.LevelFensterOffen = 50;
+	this.LevelZuSicht = 10;
+	this.LevelZuTemp  = 0;
+	
+	this.LevelSonnenschutz = 0;
+	
+	this.ID_Insektenschutz = null;
+	this.LevelInsektenschutz = 100;
+	
+	this.LichtAutomaticOffen = true;
+	this.OpDelay = 0;
+}
+
+function addLight(i,LightId) {
+	rollos[i].ID_Licht.push(LightId);
+}
+
+function setWindow (i,WindowId) {
+	rollos[i].ID_Fenster = WindowId;
+}
+
+function enableInsektenschutz(i,Level){
+	rollos[i].ID_Insektenschutz=rollos[i].ID_Rollokontrolle+".Insektenschutz";
+	rollos[i].LevelInsektenschutz = Level;
+}
+
+function setOpDelays() {
+	var OpDelay = 100;
+	var OpDelayStep = 45000;
+	
+	for (var i = 0; i<rollos.length; i++) {
+		if (rollos[i].OpDelay !== 0) {
+			rollos[i].OpDelay = OpDelay;
+			OpDelay += OpDelayStep;
+		}
+	}
+}
+
+function parseTime(timeStr){
+    var timeobj = {hour:0, min:0};
     
-rollos[0] = {   Name: "Schlafzimmer OG",
-                Oeffnungszeit_Werktag: "07:30",
-                Schedule_Werktag: "30 7,9 * * *",
-                Oeffnungszeit_Feiertag: "09:30",
-                Schedule_Feiertag: "30 7,9 * * *",
-                LimitAussentemperatur: 5.0,
-                Helligkeitslevel1: 1,
-                Helligkeitslevel2: 2,
-                ID_Fenster: "hm-rpc.0.HEQ0159933.1.STATE",
-                ID_Rollo: "hm-rpc.0.IEQ0148648.1.LEVEL",
-                ID_RolloMotion: "hm-rpc.0.IEQ0148648.1.WORKING",
-                ID_Licht: ["hm-rpc.0.GEQ0210167.1.LEVEL", "hm-rpc.0.GEQ0210167.2.LEVEL", "hm-rpc.0.IEQ0090665.1.STATE"],
-                ID_Rollokontrolle: 'Rollos.SchlafzimmerOG',
-                LevelFensterOffen: 50,
-                LevelZuSicht: 15,
-                LevelZuTemp: 0,
-                LevelSonnenschutz: 0,
-                ID_Insektenschutz: 0,
-                LevelInsektenschutz: 45,
-                LichtAutomaticOffen: true,
-                OpDelay: 100
-};
-
-rollos[1] = {
-                Name: "Bad OG",
-                Oeffnungszeit_Werktag: "07:31",
-                Schedule_Werktag: "31 7,9 * * *",
-                Oeffnungszeit_Feiertag: "09:31",
-                Schedule_Feiertag: "31 7,9 * * *",
-                LimitAussentemperatur: 5.0,
-                Helligkeitslevel1: 1,
-                Helligkeitslevel2: 2,
-                ID_Fenster: null,
-                ID_Rollo: "hm-rpc.0.JEQ0117120.1.LEVEL",
-                ID_RolloMotion: "hm-rpc.0.JEQ0117120.0.WORKING",
-                ID_Licht: ["hm-rpc.0.LEQ1318091.1.LEVEL"], 
-                ID_Rollokontrolle: "Rollos.BadOG",
-                LevelFensterOffen: 0,
-                LevelZuSicht: 15,
-                LevelZuTemp: 0,
-                LevelSonnenschutz: 25,
-                ID_Insektenschutz: 0,
-                LevelInsektenschutz: 0,
-                OpDelay: 45000
-};
-
-
-rollos[2] = {
-                Name: "Küche OG",
-                Oeffnungszeit_Werktag: "07:00",
-                Schedule_Werktag: "0 7 * * *",
-                Oeffnungszeit_Feiertag: "07:00",
-                Schedule_Feiertag: "0 7 * * *",
-                LimitAussentemperatur: 5.0,
-                Helligkeitslevel1: 1,
-                Helligkeitslevel2: 2,
-                ID_Fenster: "hm-rpc.0.LEQ0920193.1.STATE",
-                ID_Rollo: "hm-rpc.0.IEQ0079678.1.LEVEL",
-                ID_RolloMotion: "hm-rpc.0.IEQ0079678.0.WORKING",
-                ID_Licht: ["hm-rpc.0.IEQ0541192.1.STATE"], 
-                ID_Rollokontrolle: "Rollos.KuecheOG",
-                LevelFensterOffen: 50,
-                LevelZuSicht: 10,
-                LevelZuTemp: 0,
-                LevelSonnenschutz: 25,
-                ID_Insektenschutz: 0,
-                LevelInsektenschutz: 0,
-                OpDelay: 90000
-};
-
-
-rollos[3] = {
-                Name: "Medienraum OG (Nord)",
-                Oeffnungszeit_Werktag: "07:01",
-                Schedule_Werktag: "1 7 * * *",
-                Oeffnungszeit_Feiertag: "07:01",
-                Schedule_Feiertag: "1 7 * * *",
-                LimitAussentemperatur: 5.0,
-                Helligkeitslevel1: 1,
-                Helligkeitslevel2: 2,
-                ID_Fenster: "hm-rpc.0.MEQ0175031.1.STATE",
-                ID_Rollo: "hm-rpc.0.IEQ0079554.1.LEVEL",
-                ID_RolloMotion: "hm-rpc.0.IEQ0079554.0.WORKING",
-                ID_Licht: ["hm-rpc.0.IEQ0039909.1.LEVEL"], 
-                ID_Rollokontrolle: "Rollos.Medienraum_Nord",
-                LevelFensterOffen: 40,
-                LevelZuSicht: 10,
-                LevelZuTemp: 0,
-                LevelSonnenschutz: 25,
-                ID_Insektenschutz: 0,
-                LevelInsektenschutz: 0,
-                OpDelay: 135000
-};
-
-rollos[4] = {
-                Name: "Medienraum OG (Ost)",
-                Oeffnungszeit_Werktag: "07:02",
-                Schedule_Werktag: "2 7 * * *",
-                Oeffnungszeit_Feiertag: "07:02",
-                Schedule_Feiertag: "2 7 * * *",
-                LimitAussentemperatur: 5.0,
-                Helligkeitslevel1: 1,
-                Helligkeitslevel2: 2,
-                ID_Fenster: null,
-                ID_Rollo: "hm-rpc.0.IEQ0080208.1.LEVEL",
-                ID_RolloMotion: "hm-rpc.0.IEQ0080208.0.WORKING",
-                ID_Licht: ["hm-rpc.0.IEQ0039909.1.LEVEL"],
-                ID_Rollokontrolle: "Rollos.Medienraum_Ost",
-                LevelFensterOffen: 0,
-                LevelZuSicht: 10,
-                LevelZuTemp: 0,
-                LevelSonnenschutz: 0,
-                ID_Insektenschutz: 0,
-                LevelInsektenschutz: 0,
-                OpDelay: 180000
-};
-
-
-dwmlog ("Konfiguration definiert mit "+rollos.length+" Einträgen",3);
-
-/*
-function setupObjects() {
-    dwmlog ("setting up objects for "+ rollos.length + " entries starting at id "+FirstId+".",3);
+    var time = timeStr.match(/(\d+)(?::(\d\d))?\s*(p?)/i);
+    if (!time) {
+        return NaN;
+    }
+    var hours = parseInt(time[1], 10);
+    if (hours == 12 && !time[3]) {
+        hours = 0;
+    }
+    else {
+        hours += (hours < 12 && time[3]) ? 12 : 0;
+    }
     
-    for (var i = 0; i < rollos.length; i++) {
-        // set up the objects
-        var ID_Rollokontrolle = FirstId+10+10*i;
-        rollos [i].ID_Rollokontrolle = ID_Rollokontrolle;
-        
-        setObject(ID_Rollokontrolle, {
-            _persistent: false,
-            Name: "Rollo-Kontrolle "+rollos[i].Name,
-            TypeName: "CHANNEL",
-            HssType: "Rolladen-Kontrolle.Rollo",
-            Address: "CCUIO_DWMRL."+i,
-            Interface: "CCU.IO",
-            DPs: {
-                Automatik: ID_Rollokontrolle + 1,
-                Grundzustand: ID_Rollokontrolle + 2,
-                LEVEL: ID_Rollokontrolle + 3
-            },
-        });
+    timeobj.hour=hours;
+    timeobj.min = parseInt(time[2], 10) || 0;
 
-        setObject(ID_Rollokontrolle+1, {
-            _persistent: true,
-            "Name": "Rolloautomatik "+rollos[i].Name,
-            "TypeName": "HSSDP",
-            "Address": "CCUI_DWMRL."+i+".1",
-            "DPInfo": "Schalter für Automatikbetrieb Rollo",
-            "ValueMin": 0,
-            "ValueMax": 3,
-            "ValueUnit": "",
-            "ValueType": 16,
-            "ValueSubType": 29,
-            "ValueList": "Aus;Zeitweise Aus;Automatikbetrieb;Automatik mit Sonnenschutz",    
-        },function () {
-            setState (ID_Rollokontrolle+1, 2);
-        });
+    return timeobj;    
+}
 
-        setObject(ID_Rollokontrolle+2, {
-            _persistent: true,
-            "Name": "Rollo Grundzustand "+rollos[i].Name,
-            "TypeName": "HSSDP",
-            "Address": "CCUI_DWMRL."+i+".2",
-            "DPInfo": "Basiszustand: Geöffnet oder Geschlossen",
-            "ValueMin": 0,
-            "ValueMax": 1,
-            "ValueUnit": "",
-            "ValueType": 16,
-            "ValueSubType": 29,
-            "ValueList": "Geschlossen;Geöffnet",    
-        });
+function uniq(a) {
+    return a.sort().filter(function(item, pos, ary) {
+        return !pos || item != ary[pos - 1];
+    })
+}
 
-        setObject(ID_Rollokontrolle+3, {
-            "Name": "Rollo Öffungsgrad "+rollos[i].Name,
-            "TypeName": "HSSDP",
-            "ValueUnit": "%",
-            "Address": "CCUI_DWMRL."+i+".3",
-            _persistent: true
-        });                
-
-    } // for loop ...
-}*/
+function calcSchedule(timearr) {
+    var hourarr=[];
+    var minarr=[];
+    var theobj=null;
+    
+    for (i=0; i<timearr.length; i++) {
+        theobj=parseTime(timearr[i]);
+        hourarr.push(theobj.hour);
+        minarr.push(theobj.min);
+    }
+    
+    theSchedule = uniq(minarr).toString()+" "+uniq(hourarr).toString()+ " * * *";
+    return theSchedule;
+}
 
 function setupStates() {
     dwmlog ("setting up states for "+ rollos.length +" entries.",3);
@@ -227,6 +175,10 @@ function setupStates() {
                    );
 
         createState (ID_Rollokontrolle+'.Öffnungsgrad',0,{unit: "%"} )
+		
+		if (rollos[i].ID_Insektenschutz !== null) {
+			createState (rollos[i].ID_Insektenschutz,false,{ type: "boolean"} );
+		}
     } // for loop ...
 }
 
@@ -286,75 +238,35 @@ function setupLights() {
 function setupSchedules() {
     for (var i = 0; i < rollos.length; i++) {
         if (i==0) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function() { RolloOp(0); });
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(0); } );
-            }
+            dwmlog ("setupSchedules für Index: "+i+" auf "+rollos[i].OpenSchedule,4);        
+            schedule(rollos[i].OpenSchedule, function() { RolloOp(0); });
         } else if (i==1) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(1); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(1); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(1); } );
         } else if (i==2) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(2); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(2); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(2); } );
         } else if (i==3) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(3); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(3); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(3); } );
         } else if (i==4) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(4); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(4); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(4); } );
         } else if (i==5) {
            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(5); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(5); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(5); } );
         } else if (i==6) {
            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(6); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(6); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(6); } );
         } else if (i==7) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(7); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(7); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(7); } );
         } else if (i==8) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(8); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(8); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(8); } );
         } else if (i==9) {
             dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].Schedule_Werktag, function(){ RolloOp(9); } );
-            
-            if (rollos[i].Schedule_Feiertag != rollos[i].Schedule_Werktag) {
-                schedule(rollos[i].Schedule_Feiertag, function(){ RolloOp(9); } );
-            }
+            schedule(rollos[i].OpenSchedule, function(){ RolloOp(9); } );
         }
 	}
 }
@@ -530,14 +442,15 @@ function RolloOp( i ) {
     if (rollos[i].ID_Fenster != null){
         fenster = getState(rollos[i].ID_Fenster).val;
     }
-    var sonne = Sonnenschutz();
     
+	// Sonnenschutz abchecken??
+	
     var Insektenschutz = false;
-    if ( rollos[i].ID_Insektenschutz != 0) {
-        Insektenschutz = getState(rollos[i].ID_Insektenschutz);
+    if ( rollos[i].ID_Insektenschutz !== null) {
+        Insektenschutz = getState(rollos[i].ID_Insektenschutz).val;
     }
     
-    var LevelSoll=bestimmeLevel (i, Zustand, Aussentemp, fenster, sonne, false, rollos[i].Insektenschutz);
+    var LevelSoll=bestimmeLevel (i, Zustand, Aussentemp, fenster, sonne, false, Insektenschutz);
     
     // Jetzt muss "nur" noch sinnvoll gefahren werden .... 
     var Auto = getState(rollos[i].ID_Rollokontrolle+".Rolloautomatik").val;
