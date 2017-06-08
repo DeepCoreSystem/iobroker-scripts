@@ -17,7 +17,7 @@ setWindow(0,"hm-rpc.0.HEQ0159933.1.STATE");
 addLight(0,"hm-rpc.0.GEQ0210167.1.LEVEL");
 addLight(0,"hm-rpc.0.GEQ0210167.2.LEVEL");
 addLight(0,"hm-rpc.0.IEQ0090665.1.STATE");
-enableInsektenschutz(0,45);
+enableInsektenschutz(0);
 
 rollos[1] = new createRollo("Bad OG","hm-rpc.0.JEQ0117120.1.LEVEL","07:31","09:31");
 rollos[1].ID_Rollokontrolle="Rollos.BadOG";
@@ -70,7 +70,7 @@ function createRollo(Name, IdRollo, ZeitWerktag, ZeitFeiertag ) {
 	this.LevelSonnenschutz = 0;
 	
 	this.ID_Insektenschutz = null;
-	this.LevelInsektenschutz = 100;
+	this.LevelInsektenschutz = 45;
 	
 	this.LichtAutomaticOffen = true;
 	this.OpDelay = 0;
@@ -84,9 +84,8 @@ function setWindow (i,WindowId) {
 	rollos[i].ID_Fenster = WindowId;
 }
 
-function enableInsektenschutz(i,Level){
+function enableInsektenschutz(i){
 	rollos[i].ID_Insektenschutz=rollos[i].ID_Rollokontrolle+".Insektenschutz";
-	rollos[i].LevelInsektenschutz = Level;
 }
 
 function setOpDelays() {
@@ -237,37 +236,8 @@ function setupLights() {
 
 function setupSchedules() {
     for (var i = 0; i < rollos.length; i++) {
-        if (i==0) {
-            dwmlog ("setupSchedules für Index: "+i+" auf "+rollos[i].OpenSchedule,4);        
-            schedule(rollos[i].OpenSchedule, function() { RolloOp(0); });
-        } else if (i==1) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(1); } );
-        } else if (i==2) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(2); } );
-        } else if (i==3) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(3); } );
-        } else if (i==4) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(4); } );
-        } else if (i==5) {
-           dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(5); } );
-        } else if (i==6) {
-           dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(6); } );
-        } else if (i==7) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(7); } );
-        } else if (i==8) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(8); } );
-        } else if (i==9) {
-            dwmlog ("setupSchedules für Index: "+i,4);        
-            schedule(rollos[i].OpenSchedule, function(){ RolloOp(9); } );
-        }
+        dwmlog ("setupSchedules für Index: "+i+" auf "+rollos[i].OpenSchedule,4);        
+        schedule(rollos[i].OpenSchedule, function(i) { RolloOp(i); }.bind(null,i) );
 	}
 }
 
@@ -442,12 +412,11 @@ function RolloOp( i ) {
     if (rollos[i].ID_Fenster != null){
         fenster = getState(rollos[i].ID_Fenster).val;
     }
+    var sonne = Sonnenschutz();
     
-	// Sonnenschutz abchecken??
-	
     var Insektenschutz = false;
     if ( rollos[i].ID_Insektenschutz !== null) {
-        Insektenschutz = getState(rollos[i].ID_Insektenschutz).val;
+        Insektenschutz = getState(rollos[i].ID_Insektenschutz);
     }
     
     var LevelSoll=bestimmeLevel (i, Zustand, Aussentemp, fenster, sonne, false, Insektenschutz);
